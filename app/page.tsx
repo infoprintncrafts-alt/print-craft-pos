@@ -197,7 +197,7 @@ export default function Home() {
       const statusCounts: Record<string, number> = {};
       pipelineTemplate.forEach(stage => {
         statusCounts[stage.status] = jobs.filter(job => job.status === stage.status).length;
-      });totalDebt
+      });totaltotalDebt
       setPipeline(pipelineTemplate.map(stage => ({ ...stage, value: statusCounts[stage.status] || 0 })));
       
       setMetrics({
