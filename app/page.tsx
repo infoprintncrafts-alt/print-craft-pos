@@ -197,14 +197,14 @@ export default function Home() {
       const statusCounts: Record<string, number> = {};
       pipelineTemplate.forEach(stage => {
         statusCounts[stage.status] = jobs.filter(job => job.status === stage.status).length;
-      });totaltotalDebt
+      });
       setPipeline(pipelineTemplate.map(stage => ({ ...stage, value: statusCounts[stage.status] || 0 })));
       
       setMetrics({
         todaySales: todaySales.reduce((sum, sale) => sum + Number(sale.total || 0), 0),
         todayInvoices: todaySales.length,
         monthSales: sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0),
-        debt: (debtsResult.data ?? []).reduce((sum, row) => sum + Number(row.outstanding_balance || 0), 0),
+        debt: totalDebt,
         pendingJobs: jobs.filter((job) => pendingStatuses.has(job.status)).length,
         dueToday: jobs.filter((job) => job.due_date && new Date(job.due_date).toISOString().slice(0, 10) === now.toISOString().slice(0, 10)).length,
         lowStock: (productsResult.data ?? []).filter((product) => Number(product.stock_quantity) <= Number(product.minimum_stock)).length,
