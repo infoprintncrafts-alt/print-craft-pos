@@ -64,7 +64,8 @@ function SectionTitle({ eyebrow, title, href, hrefLabel = "View all" }: { eyebro
 
 const pipelineTemplate = [
   { label: "New order", status: "new", color: "bg-slate-400" },
-  { label: "Design pending", status: "quotation", color: "bg-violet-500" },
+  { label: "Designing", status: "designing", color: "bg-violet-500" },
+  { label: "Approved", status: "approved", color: "bg-indigo-500" },
   { label: "In production", status: "production", color: "bg-blue-500" },
   { label: "Quality check", status: "quality_check", color: "bg-amber-500" },
   { label: "Ready", status: "ready", color: "bg-emerald-500" },
