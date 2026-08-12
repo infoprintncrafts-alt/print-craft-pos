@@ -165,17 +165,24 @@ export default function Home() {
       const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
       const startMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const [salesResult, expensesResult, productsResult, debtsResult, jobsResult] = await Promise.all([
-        supabase.from("sales").select("sale_date,total,paid_amount").gte("sale_date", startMonth),
+        supabase.from("sales").select("sale_date,total,paid_amount,customer_id").gte("sale_date", startMonth),
         supabase.from("expenses").select("expense_date,amount").gte("expense_date", startMonth),
         supabase.from("products").select("stock_quantity,minimum_stock").eq("is_active", true),
-        supabase.from("customer_balances").select("outstanding_balance"),
+        supabase.from("sales").select("total,paid_amount"),
         supabase.from("orders").select("status,due_date"),
       ]);
       const sales = salesResult.data ?? [];
       const expenses = expensesResult.data ?? [];
+      const allSales = debtsResult.data ?? [];
       const todaySales = sales.filter((sale) => new Date(sale.sale_date).toISOString() >= startToday);
       const pendingStatuses = new Set(["new", "quotation", "designing", "approved", "production", "quality_check"]);
       const jobs = jobsResult.data ?? [];
+      
+      // Calculate total debt from sales directly
+      const totalDebt = allSales.reduce((sum, sale) => {
+        const unpaid = Number(sale.total || 0) - Number(sale.paid_amount || 0);
+        return sum + Math.max(unpaid, 0);
+      }, 0);
       
       // Load recent sales with customer names
       const { data: salesWithCustomers } = await supabase
@@ -190,7 +197,7 @@ export default function Home() {
       const statusCounts: Record<string, number> = {};
       pipelineTemplate.forEach(stage => {
         statusCounts[stage.status] = jobs.filter(job => job.status === stage.status).length;
-      });
+      });totalDebt
       setPipeline(pipelineTemplate.map(stage => ({ ...stage, value: statusCounts[stage.status] || 0 })));
       
       setMetrics({
