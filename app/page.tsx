@@ -62,12 +62,21 @@ function SectionTitle({ eyebrow, title, href, hrefLabel = "View all" }: { eyebro
   );
 }
 
+const pipelineTemplate = [
+  { label: "New order", status: "new", color: "bg-slate-400" },
+  { label: "Design pending", status: "quotation", color: "bg-violet-500" },
+  { label: "In production", status: "production", color: "bg-blue-500" },
+  { label: "Quality check", status: "quality_check", color: "bg-amber-500" },
+  { label: "Ready", status: "ready", color: "bg-emerald-500" },
+];
+
 export default function Home() {
   const [period, setPeriod] = useState("Today");
   const [metrics, setMetrics] = useState(emptyMetrics);
   const [chartBars, setChartBars] = useState<number[]>([]);
   const [chartTotal, setChartTotal] = useState(0);
   const [chartLabels, setChartLabels] = useState<string[]>([]);
+  const [pipeline, setPipeline] = useState(pipelineTemplate.map(p => ({ ...p, value: 0 })));
 
   async function loadChartData(selectedPeriod: string) {
     const now = new Date();
@@ -165,6 +174,14 @@ export default function Home() {
       const todaySales = sales.filter((sale) => new Date(sale.sale_date).toISOString() >= startToday);
       const pendingStatuses = new Set(["new", "quotation", "designing", "approved", "production", "quality_check"]);
       const jobs = jobsResult.data ?? [];
+      
+      // Count jobs by status for pipeline
+      const statusCounts: Record<string, number> = {};
+      pipelineTemplate.forEach(stage => {
+        statusCounts[stage.status] = jobs.filter(job => job.status === stage.status).length;
+      });
+      setPipeline(pipelineTemplate.map(stage => ({ ...stage, value: statusCounts[stage.status] || 0 })));
+      
       setMetrics({
         todaySales: todaySales.reduce((sum, sale) => sum + Number(sale.total || 0), 0),
         todayInvoices: todaySales.length,
