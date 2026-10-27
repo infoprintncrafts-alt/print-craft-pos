@@ -153,6 +153,14 @@ export default function OutstandingPage() {
     outstandingInvoices.filter((invoice) => invoice.customer_id).map((invoice) => invoice.customer_id)
   ).size;
 
+  function sendPaymentReminder(invoice: OutstandingInvoice) {
+    const customer = invoice.customer_id ? customerById[invoice.customer_id] : undefined;
+    const phone = (customer?.phone || "").replace(/\D/g, "").replace(/^0/, "94");
+    if (!phone) { alert("This customer does not have a WhatsApp number."); return; }
+    const message = [`Hello ${invoice.customerName},`, "", "This is a friendly reminder from Print & Craft.", `Invoice: ${invoice.invoice_number}`, `Outstanding balance: ${money(invoice.balance)}`, "", "Please contact us if you have already paid or need assistance. Thank you."].join("\n");
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
@@ -230,7 +238,7 @@ export default function OutstandingPage() {
                       <td className="px-4 py-4 text-right text-slate-700">{money(invoice.total)}</td>
                       <td className="px-4 py-4 text-right text-emerald-700">{money(invoice.paid_amount)}</td>
                       <td className="px-4 py-4 text-right font-bold text-red-600">{money(invoice.balance)}</td>
-                      <td className="px-5 py-4 text-right"><Link href={`/sales/invoice/${invoice.id}`} className="inline-flex rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">View invoice</Link></td>
+                      <td className="px-5 py-4 text-right"><div className="flex justify-end gap-2"><button onClick={() => sendPaymentReminder(invoice)} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700">WhatsApp</button><Link href={`/sales/invoice/${invoice.id}`} className="inline-flex rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">View invoice</Link></div></td>
                     </tr>
                   ))}
                 </tbody>

@@ -16,6 +16,7 @@ export default function SettingsPage() {
   const [error, setError] = useState("");
   const [newKey, setNewKey] = useState("");
   const [newValue, setNewValue] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -56,10 +57,10 @@ export default function SettingsPage() {
       setSaving(true);
       setError("");
 
-      const { error } = await supabase.from("settings").insert({
-        key: newKey.trim(),
-        value: newValue.trim(),
-      });
+      const payload = { key: newKey.trim().toLowerCase().replace(/\s+/g, "_"), value: newValue.trim() };
+      const { error } = editingId
+        ? await supabase.from("settings").update(payload).eq("id", editingId)
+        : await supabase.from("settings").upsert(payload, { onConflict: "key" });
 
       if (error) {
         throw new Error(error.message);
@@ -67,6 +68,7 @@ export default function SettingsPage() {
 
       setNewKey("");
       setNewValue("");
+      setEditingId(null);
       await loadSettings();
     } catch (err) {
       console.error("Create setting error:", err);
@@ -74,6 +76,13 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  function editSetting(setting: Setting) { setEditingId(setting.id); setNewKey(setting.key); setNewValue(setting.value); }
+  async function deleteSetting(setting: Setting) {
+    if (!window.confirm(`Delete setting “${setting.key}”?`)) return;
+    const { error: deleteError } = await supabase.from("settings").delete().eq("id", setting.id);
+    if (deleteError) setError(deleteError.message); else await loadSettings();
   }
 
   return (
@@ -99,7 +108,7 @@ export default function SettingsPage() {
                 value={newKey}
                 onChange={(e) => setNewKey(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-black"
-                placeholder="e.g. invoice_prefix"
+              placeholder="e.g. business_name, invoice_prefix, whatsapp_number"
               />
             </div>
             <div>
@@ -120,7 +129,7 @@ export default function SettingsPage() {
               disabled={saving}
               className="rounded-xl bg-black px-5 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {saving ? "Saving..." : "Add Setting"}
+              {saving ? "Saving..." : editingId ? "Save Setting" : "Save Setting"}
             </button>
           </div>
 
@@ -142,6 +151,7 @@ export default function SettingsPage() {
                 <tr className="border-b border-slate-200 bg-slate-50">
                   <th className="px-4 py-3 font-semibold text-slate-600">Key</th>
                   <th className="px-4 py-3 font-semibold text-slate-600">Value</th>
+                  <th className="px-4 py-3 font-semibold text-slate-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -149,6 +159,7 @@ export default function SettingsPage() {
                   <tr key={setting.id} className="border-b border-slate-200 hover:bg-slate-50">
                     <td className="px-4 py-4 text-slate-900">{setting.key}</td>
                     <td className="px-4 py-4 text-slate-600">{setting.value}</td>
+                    <td className="px-4 py-4"><button onClick={() => editSetting(setting)} className="mr-3 text-xs font-bold text-blue-600">Edit</button><button onClick={() => void deleteSetting(setting)} className="text-xs font-bold text-rose-600">Delete</button></td>
                   </tr>
                 ))}
               </tbody>

@@ -18,6 +18,7 @@ export default function StaffPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -63,12 +64,10 @@ export default function StaffPage() {
       setSaving(true);
       setError("");
 
-      const { error } = await supabase.from("staff").insert({
-        name: name.trim(),
-        email: email.trim(),
-        role,
-        is_active: isActive,
-      });
+      const payload = { name: name.trim(), email: email.trim(), role, is_active: isActive };
+      const { error } = editingId
+        ? await supabase.from("staff").update(payload).eq("id", editingId)
+        : await supabase.from("staff").insert(payload);
 
       if (error) {
         throw new Error(error.message);
@@ -78,6 +77,7 @@ export default function StaffPage() {
       setEmail("");
       setRole("cashier");
       setIsActive(true);
+      setEditingId(null);
       setShowForm(false);
 
       await loadStaff();
@@ -87,6 +87,21 @@ export default function StaffPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  function editStaff(member: StaffMember) {
+    setEditingId(member.id); setName(member.name); setEmail(member.email); setRole(member.role); setIsActive(member.is_active); setShowForm(true);
+  }
+
+  async function toggleStaff(member: StaffMember) {
+    const { error: updateError } = await supabase.from("staff").update({ is_active: !member.is_active }).eq("id", member.id);
+    if (updateError) setError(updateError.message); else await loadStaff();
+  }
+
+  async function deleteStaff(member: StaffMember) {
+    if (!window.confirm(`Delete staff member ${member.name}?`)) return;
+    const { error: deleteError } = await supabase.from("staff").delete().eq("id", member.id);
+    if (deleteError) setError(deleteError.message); else await loadStaff();
   }
 
   return (
@@ -167,7 +182,7 @@ export default function StaffPage() {
                 disabled={saving}
                 className="rounded-xl bg-black px-5 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {saving ? "Saving..." : "Create Staff"}
+                {saving ? "Saving..." : editingId ? "Save changes" : "Create Staff"}
               </button>
             </div>
 
@@ -191,6 +206,7 @@ export default function StaffPage() {
                   <th className="px-4 py-3 font-semibold text-slate-600">Role</th>
                   <th className="px-4 py-3 font-semibold text-slate-600">Status</th>
                   <th className="px-4 py-3 font-semibold text-slate-600">Added</th>
+                  <th className="px-4 py-3 font-semibold text-slate-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -201,6 +217,7 @@ export default function StaffPage() {
                     <td className="px-4 py-4 text-slate-700">{member.role}</td>
                     <td className="px-4 py-4 text-slate-700">{member.is_active ? "Active" : "Inactive"}</td>
                     <td className="px-4 py-4 text-slate-600">{new Date(member.created_at).toLocaleDateString("en-GB")}</td>
+                    <td className="px-4 py-4"><div className="flex gap-2"><button onClick={() => editStaff(member)} className="text-xs font-bold text-blue-600">Edit</button><button onClick={() => void toggleStaff(member)} className="text-xs font-bold text-amber-600">{member.is_active ? "Deactivate" : "Activate"}</button><button onClick={() => void deleteStaff(member)} className="text-xs font-bold text-rose-600">Delete</button></div></td>
                   </tr>
                 ))}
               </tbody>
