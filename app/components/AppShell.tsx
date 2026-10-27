@@ -37,6 +37,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      await supabase
+        .from("staff")
+        .update({ auth_user_id: data.user.id })
+        .ilike("email", data.user.email || "")
+        .is("auth_user_id", null);
+
       setAuthenticated(true);
       setChecking(false);
     }
