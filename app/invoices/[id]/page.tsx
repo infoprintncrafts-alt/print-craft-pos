@@ -23,6 +23,7 @@ type Sale = {
   total: number;
   paid_amount: number;
   payment_status: string;
+  cashier_id: string | null;
   notes: string | null;
 };
 
@@ -56,6 +57,7 @@ export default function InvoicePage() {
   const [sale, setSale] = useState<Sale | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [items, setItems] = useState<SaleItem[]>([]);
+  const [createdBy, setCreatedBy] = useState("System");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -81,6 +83,7 @@ export default function InvoicePage() {
           total,
           paid_amount,
           payment_status,
+          cashier_id,
           notes
         `)
         .eq("invoice_number", invoiceId)
@@ -94,6 +97,13 @@ if (!saleData) {
       if (!saleData) throw new Error("Invoice not found.");
 
       setSale(saleData as Sale);
+
+      if (saleData.cashier_id) {
+        const { data: staffData } = await supabase.from("staff").select("name").eq("auth_user_id", saleData.cashier_id).maybeSingle();
+        setCreatedBy(staffData?.name || "Staff member");
+      } else {
+        setCreatedBy("System");
+      }
 
       if (saleData.customer_id) {
         const { data: customerData } = await supabase
@@ -270,6 +280,7 @@ if (!saleData) {
               <p className="mt-1 text-xs">
                 <strong>Date:</strong> {formatDate(sale.sale_date)}
               </p>
+              <p className="mt-1 text-xs"><strong>Invoice Created By:</strong> {createdBy}</p>
             </div>
           </header>
 

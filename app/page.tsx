@@ -69,6 +69,7 @@ const pipelineTemplate = [
 
 export default function Home() {
   const [period, setPeriod] = useState("Today");
+  const [staffName, setStaffName] = useState("Staff member");
   const [metrics, setMetrics] = useState(emptyMetrics);
   const [chartBars, setChartBars] = useState<number[]>([]);
   const [chartTotal, setChartTotal] = useState(0);
@@ -157,6 +158,15 @@ export default function Home() {
 
   useEffect(() => {
     async function loadDashboard() {
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData.user) {
+        const { data: staff } = await supabase
+          .from("staff")
+          .select("name")
+          .eq("auth_user_id", authData.user.id)
+          .maybeSingle();
+        setStaffName(staff?.name || authData.user.email || "Staff member");
+      }
       const now = new Date();
       const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
       const startMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -227,7 +237,7 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-3">
             <button aria-label="Notifications" className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-blue-200 hover:text-blue-600">â™¢<span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500" /></button>
-            <div className="hidden items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm sm:flex"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-950 text-xs font-bold text-white">A</span><span><span className="block text-xs font-bold">Administrator</span><span className="block text-[10px] text-slate-400">Admin</span></span></div>
+            <div className="hidden items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm sm:flex"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-950 text-xs font-bold text-white">{staffName.slice(0, 1).toUpperCase()}</span><span><span className="block text-xs font-bold">{staffName}</span><span className="block text-[10px] text-slate-400">Signed in</span></span></div>
           </div>
         </div>
       </header>

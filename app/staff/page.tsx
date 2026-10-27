@@ -9,6 +9,7 @@ type StaffMember = {
   email: string;
   role: string;
   is_active: boolean;
+  auth_user_id: string | null;
   created_at: string;
 };
 
@@ -36,7 +37,7 @@ export default function StaffPage() {
 
       const { data, error } = await supabase
         .from("staff")
-        .select("id, name, email, role, is_active, created_at")
+        .select("id, name, email, role, is_active, auth_user_id, created_at")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -111,7 +112,7 @@ export default function StaffPage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Staff</h1>
             <p className="mt-2 text-sm text-slate-500">
-              Manage POS users, roles, and employee access.
+              Manage POS users, roles, and employee access. Create each staff login in Supabase Authentication using the same email; it will link automatically.
             </p>
           </div>
           <button
@@ -205,6 +206,7 @@ export default function StaffPage() {
                   <th className="px-4 py-3 font-semibold text-slate-600">Email</th>
                   <th className="px-4 py-3 font-semibold text-slate-600">Role</th>
                   <th className="px-4 py-3 font-semibold text-slate-600">Status</th>
+                  <th className="px-4 py-3 font-semibold text-slate-600">Login</th>
                   <th className="px-4 py-3 font-semibold text-slate-600">Added</th>
                   <th className="px-4 py-3 font-semibold text-slate-600">Actions</th>
                 </tr>
@@ -216,6 +218,7 @@ export default function StaffPage() {
                     <td className="px-4 py-4 text-slate-600">{member.email}</td>
                     <td className="px-4 py-4 text-slate-700">{member.role}</td>
                     <td className="px-4 py-4 text-slate-700">{member.is_active ? "Active" : "Inactive"}</td>
+                    <td className="px-4 py-4 text-xs font-semibold">{member.auth_user_id ? <span className="text-emerald-700">Linked</span> : <span className="text-amber-700">Create login</span>}</td>
                     <td className="px-4 py-4 text-slate-600">{new Date(member.created_at).toLocaleDateString("en-GB")}</td>
                     <td className="px-4 py-4"><div className="flex gap-2"><button onClick={() => editStaff(member)} className="text-xs font-bold text-blue-600">Edit</button><button onClick={() => void toggleStaff(member)} className="text-xs font-bold text-amber-600">{member.is_active ? "Deactivate" : "Activate"}</button><button onClick={() => void deleteStaff(member)} className="text-xs font-bold text-rose-600">Delete</button></div></td>
                   </tr>

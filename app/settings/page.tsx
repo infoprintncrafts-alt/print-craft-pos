@@ -18,6 +18,11 @@ export default function SettingsPage() {
   const [newValue, setNewValue] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const recommendedSettings = [
+    ["business_name", "PRINT & CRAFT (PVT) LTD."], ["invoice_prefix", "INV-"], ["currency", "LKR"],
+    ["whatsapp_number", "94757138882"], ["payment_terms_days", "30"], ["low_stock_alert", "true"],
+  ] as const;
+
   useEffect(() => {
     loadSettings();
   }, []);
@@ -79,6 +84,12 @@ export default function SettingsPage() {
   }
 
   function editSetting(setting: Setting) { setEditingId(setting.id); setNewKey(setting.key); setNewValue(setting.value); }
+  async function addRecommendedSetting(key: string, value: string) {
+    setSaving(true); setError("");
+    const { error: saveError } = await supabase.from("settings").upsert({ key, value }, { onConflict: "key" });
+    if (saveError) setError(saveError.message); else await loadSettings();
+    setSaving(false);
+  }
   async function deleteSetting(setting: Setting) {
     if (!window.confirm(`Delete setting “${setting.key}”?`)) return;
     const { error: deleteError } = await supabase.from("settings").delete().eq("id", setting.id);
@@ -99,6 +110,12 @@ export default function SettingsPage() {
             {settings.length} setting{settings.length === 1 ? "" : "s"}
           </div>
         </div>
+
+        <section className="mb-8 rounded-3xl border border-blue-100 bg-blue-50 p-6">
+          <h2 className="text-sm font-bold text-blue-950">System controls</h2>
+          <p className="mt-1 text-sm text-blue-800">Add common defaults, then edit their values below whenever the business changes.</p>
+          <div className="mt-4 flex flex-wrap gap-2">{recommendedSettings.map(([key, value]) => <button key={key} type="button" disabled={saving} onClick={() => void addRecommendedSetting(key, value)} className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100">+ {key.replaceAll("_", " ")}</button>)}</div>
+        </section>
 
         <form className="mb-8 space-y-4 rounded-3xl bg-slate-50 p-6" onSubmit={createSetting}>
           <div className="grid gap-4 md:grid-cols-2">
