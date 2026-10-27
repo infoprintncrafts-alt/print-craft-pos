@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-const emptyMetrics = { todaySales: 0, todayInvoices: 0, monthSales: 0, debt: 0, pendingJobs: 0, dueToday: 0, lowStock: 0, monthProfit: 0 };
+const emptyMetrics = { todaySales: 0, todayInvoices: 0, monthSales: 0, debt: 0, outstandingPurchases: 0, pendingJobs: 0, dueToday: 0, lowStock: 0, monthProfit: 0 };
 
 function money(value: number) { return `LKR ${value.toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
 
@@ -18,6 +18,7 @@ function getKpis(metrics: typeof emptyMetrics) {
   { label: "Due today", value: String(metrics.dueToday), detail: "Jobs to complete", tone: "rose", icon: "◷" },
   { label: "Low stock items", value: String(metrics.lowStock), detail: metrics.lowStock ? "Needs restocking" : "Everything is in stock", tone: "emerald", icon: "□" },
   { label: "Profit this month", value: money(metrics.monthProfit), detail: "Sales less recorded expenses", tone: "teal", icon: "✦" },
+  { label: "Outstanding purchases", value: money(metrics.outstandingPurchases), detail: "Supplier payments still due", tone: "rose", icon: "↓" },
 ] as const;
 }
 
@@ -164,11 +165,12 @@ export default function Home() {
       const now = new Date();
       const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
       const startMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const [salesResult, expensesResult, productsResult, debtsResult, jobsResult] = await Promise.all([
+      const [salesResult, expensesResult, productsResult, debtsResult, purchasesResult, jobsResult] = await Promise.all([
         supabase.from("sales").select("sale_date,total,paid_amount,customer_id").gte("sale_date", startMonth),
         supabase.from("expenses").select("expense_date,amount").gte("expense_date", startMonth),
         supabase.from("products").select("stock_quantity,minimum_stock").eq("is_active", true),
         supabase.from("sales").select("total,paid_amount"),
+        supabase.from("purchases").select("total_amount,paid_amount"),
         supabase.from("orders").select("status,due_date"),
       ]);
       const sales = salesResult.data ?? [];
@@ -184,6 +186,10 @@ export default function Home() {
         return sum + Math.max(unpaid, 0);
       }, 0);
       
+      const outstandingPurchases = (purchasesResult.data ?? []).reduce((sum, purchase) => {
+        return sum + Math.max(Number(purchase.total_amount || 0) - Number(purchase.paid_amount || 0), 0);
+      }, 0);
+
       // Load recent sales with customer names
       const { data: salesWithCustomers } = await supabase
         .from("sales")
@@ -205,6 +211,7 @@ export default function Home() {
         todayInvoices: todaySales.length,
         monthSales: sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0),
         debt: totalDebt,
+        outstandingPurchases,
         pendingJobs: jobs.filter((job) => pendingStatuses.has(job.status)).length,
         dueToday: jobs.filter((job) => job.due_date && new Date(job.due_date).toISOString().slice(0, 10) === now.toISOString().slice(0, 10)).length,
         lowStock: (productsResult.data ?? []).filter((product) => Number(product.stock_quantity) <= Number(product.minimum_stock)).length,
