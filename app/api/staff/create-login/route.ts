@@ -10,8 +10,11 @@ export async function POST(request: NextRequest) {
   const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data: callerData, error: callerError } = await admin.auth.getUser(token);
   if (callerError || !callerData.user) return NextResponse.json({ error: "Your session has expired." }, { status: 401 });
-  const { data: caller } = await admin.from("staff").select("role").eq("auth_user_id", callerData.user.id).maybeSingle();
+  const callerEmail = callerData.user.email?.trim().toLowerCase();
+  if (!callerEmail) return NextResponse.json({ error: "Your account does not have an email address." }, { status: 403 });
+  const { data: caller } = await admin.from("staff").select("id,role,auth_user_id").ilike("email", callerEmail).maybeSingle();
   if (caller?.role !== "admin") return NextResponse.json({ error: "Only an administrator can create staff logins." }, { status: 403 });
+  if (!caller.auth_user_id) await admin.from("staff").update({ auth_user_id: callerData.user.id }).eq("id", caller.id);
 
   const body = await request.json() as { staffId?: string; password?: string };
   if (!body.staffId || !body.password || body.password.length < 8) return NextResponse.json({ error: "Use a temporary password of at least 8 characters." }, { status: 400 });
