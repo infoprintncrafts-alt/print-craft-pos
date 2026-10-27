@@ -11,6 +11,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  async function sendRecovery() {
+    if (!email.trim()) { setError("Enter your email address first."); return; }
+    setLoading(true); setError("");
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/reset-password` });
+    if (resetError) setError(resetError.message); else setMessage("If the account exists, a password reset email has been sent.");
+    setLoading(false);
+  }
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -73,6 +82,7 @@ export default function LoginPage() {
             {error}
           </div>
         )}
+        {message && <div className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">{message}</div>}
 
         {/* LOGIN FORM */}
         <form onSubmit={handleLogin} className="space-y-5">
@@ -126,6 +136,7 @@ export default function LoginPage() {
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>
+          <button type="button" onClick={() => void sendRecovery()} disabled={loading} className="w-full text-sm font-semibold text-blue-600 hover:text-blue-800">Forgot password?</button>
         </form>
 
         {/* FOOTER */}
