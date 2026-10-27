@@ -119,7 +119,7 @@ if (!saleData) {
           discount,
           total
         `)
-        .eq("sale_id", invoiceId)
+        .eq("sale_id", saleData.id)
         .order("id");
 
       if (itemsError) throw new Error(itemsError.message);
@@ -147,6 +147,26 @@ if (!saleData) {
       month: "2-digit",
       year: "numeric",
     });
+  }
+
+  function sendInvoiceWhatsApp() {
+    const phone = (customer?.phone || "").replace(/\D/g, "").replace(/^0/, "94");
+    if (!phone) {
+      alert("This customer does not have a WhatsApp number.");
+      return;
+    }
+    const message = [
+      `Hello ${customer?.name || "Customer"},`,
+      "",
+      `Thank you for choosing ${BUSINESS.name}.`,
+      `Invoice: ${sale?.invoice_number}`,
+      `Total: ${money(finalTotal)}`,
+      `Paid: ${money(paidAmount)}`,
+      `Balance due: ${money(balance)}`,
+      "",
+      "Please contact us if you need any assistance.",
+    ].join("\n");
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
   }
 
   // sale_items.discount is already the complete line discount.
@@ -215,7 +235,7 @@ if (!saleData) {
   return (
     <>
       <div className="print:hidden sticky top-0 z-50 border-b bg-white">
-        <div className="mx-auto flex max-w-[794px] justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-[794px] flex-wrap justify-between gap-2 px-4 py-3">
           <Link
             href="/sales"
             className="rounded-lg border px-4 py-2 text-sm font-semibold"
@@ -223,17 +243,12 @@ if (!saleData) {
             ← Back to Sales
           </Link>
 
-          <button
-            onClick={() => window.print()}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white"
-          >
-            Print / Save PDF
-          </button>
+          <div className="flex gap-2"><button onClick={sendInvoiceWhatsApp} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">WhatsApp invoice</button><button onClick={() => window.print()} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white">Print / Save PDF</button></div>
         </div>
       </div>
 
       <main className="min-h-screen bg-slate-100 p-4 print:bg-white print:p-0">
-        <div className="invoice-page mx-auto max-w-[794px] bg-white p-7 shadow-xl sm:p-12 print:max-w-none print:shadow-none">
+        <div className="invoice-page mx-auto max-w-[794px] bg-white p-7 shadow-xl sm:p-12 print:max-w-[210mm] print:shadow-none">
           <header className="flex justify-between gap-5 border-b-2 border-slate-900 pb-5">
             <div>
               <h1 className="text-xl font-black sm:text-2xl">
@@ -413,14 +428,14 @@ if (!saleData) {
 
       <style jsx global>{`
         @page {
-          size: A5 portrait;
-          margin: 7mm;
+          size: A4 portrait;
+          margin: 10mm;
         }
 
         @media print {
           html,
           body {
-            width: 148mm;
+            width: 210mm;
             background: white !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
