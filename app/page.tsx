@@ -238,7 +238,7 @@ export default function Home() {
       </header>
 
       <main className="space-y-6 p-5 sm:p-8 lg:p-10">
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {getKpis(metrics).map((kpi) => (
             <div key={kpi.label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
               <div className="flex items-start justify-between"><p className="text-sm font-semibold text-slate-500">{kpi.label}</p><span className={`flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold ${toneClasses[kpi.tone]}`}>{kpi.icon}</span></div>
