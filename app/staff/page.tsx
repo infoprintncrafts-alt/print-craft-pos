@@ -105,6 +105,18 @@ export default function StaffPage() {
     if (deleteError) setError(deleteError.message); else await loadStaff();
   }
 
+  async function createLogin(member: StaffMember) {
+    const password = window.prompt(`Set a temporary password for ${member.name} (minimum 8 characters):`);
+    if (!password) return;
+    if (password.length < 8) { setError("The temporary password must have at least 8 characters."); return; }
+    setSaving(true); setError("");
+    const { data: sessionData } = await supabase.auth.getSession();
+    const response = await fetch("/api/staff/create-login", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session?.access_token || ""}` }, body: JSON.stringify({ staffId: member.id, password }) });
+    const result = await response.json() as { error?: string };
+    if (!response.ok) setError(result.error || "Unable to create staff login."); else await loadStaff();
+    setSaving(false);
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-8">
       <div className="mx-auto max-w-6xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
@@ -112,7 +124,7 @@ export default function StaffPage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Staff</h1>
             <p className="mt-2 text-sm text-slate-500">
-              Manage POS users, roles, and employee access. Create each staff login in Supabase Authentication using the same email; it will link automatically.
+              Manage POS users, roles, and employee access. Create a secure separate login for each active staff member.
             </p>
           </div>
           <button
@@ -218,7 +230,7 @@ export default function StaffPage() {
                     <td className="px-4 py-4 text-slate-600">{member.email}</td>
                     <td className="px-4 py-4 text-slate-700">{member.role}</td>
                     <td className="px-4 py-4 text-slate-700">{member.is_active ? "Active" : "Inactive"}</td>
-                    <td className="px-4 py-4 text-xs font-semibold">{member.auth_user_id ? <span className="text-emerald-700">Linked</span> : <span className="text-amber-700">Create login</span>}</td>
+                    <td className="px-4 py-4 text-xs font-semibold">{member.auth_user_id ? <span className="text-emerald-700">Linked</span> : <button type="button" disabled={saving || !member.is_active} onClick={() => void createLogin(member)} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Create login</button>}</td>
                     <td className="px-4 py-4 text-slate-600">{new Date(member.created_at).toLocaleDateString("en-GB")}</td>
                     <td className="px-4 py-4"><div className="flex gap-2"><button onClick={() => editStaff(member)} className="text-xs font-bold text-blue-600">Edit</button><button onClick={() => void toggleStaff(member)} className="text-xs font-bold text-amber-600">{member.is_active ? "Deactivate" : "Activate"}</button><button onClick={() => void deleteStaff(member)} className="text-xs font-bold text-rose-600">Delete</button></div></td>
                   </tr>
