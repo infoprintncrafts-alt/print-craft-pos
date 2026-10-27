@@ -191,8 +191,19 @@ export default function SalesPage() {
     const orderId = new URLSearchParams(window.location.search).get("orderId");
     if (!orderId) return;
     async function loadOrderIntoSale() {
-      const { data: order } = await supabase.from("orders").select("id,customer_id,title,quantity,total,order_items(item_name,quantity,unit_price,product_id)").eq("id", orderId).maybeSingle();
+      const { data: order } = await supabase.from("orders").select("id,customer_id,title,quantity,total,sale_id,order_items(item_name,quantity,unit_price,product_id),sales(invoice_number)").eq("id", orderId).maybeSingle();
       if (!order) return;
+      if (order.sale_id) {
+        const linkedSale = Array.isArray(order.sales)
+          ? order.sales[0]
+          : order.sales;
+        if (linkedSale?.invoice_number) {
+          router.replace(`/invoices/${linkedSale.invoice_number}`);
+          return;
+        }
+        router.replace("/invoices");
+        return;
+      }
       if (order.customer_id) setCustomerId(order.customer_id);
       const items = Array.isArray(order.order_items) ? order.order_items : [];
       const first = items[0] ?? { item_name: order.title, quantity: order.quantity, unit_price: Number(order.total || 0) / Math.max(Number(order.quantity || 1), 1), product_id: null };
