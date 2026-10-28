@@ -60,7 +60,9 @@ export default function OutstandingPage() {
   const [filter, setFilter] = useState<"all" | "overdue">("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,6 +113,199 @@ export default function OutstandingPage() {
       }, {}),
     [customers]
   );
+
+  async function deleteOutstandingInvoice(invoice: OutstandingInvoice) {
+    if (Number(invoice.paid_amount || 0) > 0) {
+      setError("Only invoices with no recorded payments can be deleted.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete invoice ${invoice.invoice_number} for ${invoice.customerName}?\n\nThis will remove the unpaid invoice from the sales ledger and restore tracked inventory. This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setDeletingId(invoice.id);
+    setError("");
+    setSuccess("");
+
+    try {
+      const { data: linkedPayments, error: paymentLookupError } = await supabase
+        .from("customer_payments")
+        .select("id")
+        .eq("sale_id", invoice.id)
+        .limit(1);
+
+      if (paymentLookupError) {
+        throw new Error(
+          `Unable to verify linked payments: ${paymentLookupError.message}`
+        );
+      }
+
+      if (linkedPayments?.length) {
+        throw new Error(
+          "This invoice has linked payment records and cannot be deleted."
+        );
+      }
+
+      const { data: saleItems, error: saleItemsError } = await supabase
+        .from("sale_items")
+        .select("product_id, quantity")
+        .eq("sale_id", invoice.id);
+
+      if (saleItemsError) {
+        throw new Error(
+          `Unable to load invoice items: ${saleItemsError.message}`
+        );
+      }
+
+      const productIds = [
+        ...new Set(
+          (saleItems || [])
+            .map((item) => item.product_id)
+            .filter((id): id is string => Boolean(id))
+        ),
+      ];
+      const { data: products, error: productsError } = productIds.length
+        ? await supabase
+            .from("products")
+            .select("id, name, stock_quantity, track_stock")
+            .in("id", productIds)
+        : { data: [], error: null };
+
+      if (productsError) {
+        throw new Error(
+          `Unable to load inventory for invoice: ${productsError.message}`
+        );
+      }
+
+      const quantitiesByProduct = (saleItems || []).reduce<Record<string, number>>(
+        (quantities, item) => {
+          if (item.product_id) {
+            quantities[item.product_id] =
+              (quantities[item.product_id] || 0) + Number(item.quantity || 0);
+          }
+          return quantities;
+        },
+        {}
+      );
+      const adjustments: {
+        productId: string;
+        previousQuantity: number;
+        movementId: string;
+      }[] = [];
+
+      try {
+        for (const product of products || []) {
+          const quantity = quantitiesByProduct[product.id] || 0;
+          if (!product.track_stock || quantity <= 0) continue;
+
+          const previousQuantity = Number(product.stock_quantity || 0);
+          const resultingQuantity = previousQuantity + quantity;
+          const { data: updatedProducts, error: stockError } = await supabase
+            .from("products")
+            .update({
+              stock_quantity: resultingQuantity,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", product.id)
+            .eq("stock_quantity", previousQuantity)
+            .select("id");
+
+          if (stockError || !updatedProducts?.length) {
+            throw new Error(
+              stockError
+                ? `Unable to restore stock for ${product.name}: ${stockError.message}`
+                : `Stock for ${product.name} changed while deleting the invoice. Refresh and try again.`
+            );
+          }
+
+          const { data: movement, error: movementError } = await supabase
+            .from("stock_movements")
+            .insert({
+              product_id: product.id,
+              movement_type: "sale_void",
+              quantity_change: quantity,
+              resulting_quantity: resultingQuantity,
+              reference_type: "sale_void",
+              reference_id: invoice.id,
+              notes: `Voided invoice ${invoice.invoice_number}`,
+              created_by: null,
+            })
+            .select("id")
+            .single();
+
+          if (movementError) {
+            const { error: stockRollbackError } = await supabase
+              .from("products")
+              .update({ stock_quantity: previousQuantity })
+              .eq("id", product.id);
+            throw new Error(
+              `Unable to log restored stock for ${product.name}: ${movementError.message}${stockRollbackError ? ` Stock rollback also failed: ${stockRollbackError.message}` : ""}`
+            );
+          }
+
+          adjustments.push({
+            productId: product.id,
+            previousQuantity,
+            movementId: movement.id,
+          });
+        }
+
+        const { data: deletedSale, error: saleDeleteError } = await supabase
+          .from("sales")
+          .delete()
+          .eq("id", invoice.id)
+          .select("id")
+          .maybeSingle();
+
+        if (saleDeleteError || !deletedSale) {
+          throw new Error(
+            saleDeleteError
+              ? `Unable to delete invoice: ${saleDeleteError.message}`
+              : "Invoice was not deleted. It may have already been removed."
+          );
+        }
+      } catch (deleteError) {
+        const rollbackErrors: string[] = [];
+
+        for (const adjustment of adjustments) {
+          const [{ error: stockRollbackError }, { error: movementRollbackError }] =
+            await Promise.all([
+              supabase
+                .from("products")
+                .update({ stock_quantity: adjustment.previousQuantity })
+                .eq("id", adjustment.productId),
+              supabase
+                .from("stock_movements")
+                .delete()
+                .eq("id", adjustment.movementId),
+            ]);
+
+          if (stockRollbackError) rollbackErrors.push(stockRollbackError.message);
+          if (movementRollbackError) rollbackErrors.push(movementRollbackError.message);
+        }
+
+        if (rollbackErrors.length) {
+          throw new Error(
+            `${deleteError instanceof Error ? deleteError.message : "Unable to delete invoice."} Inventory rollback also failed: ${rollbackErrors.join("; ")}`
+          );
+        }
+
+        throw deleteError;
+      }
+
+      setSuccess(`Deleted invoice ${invoice.invoice_number}.`);
+      setReloadKey((value) => value + 1);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to delete invoice."
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   const outstandingInvoices = useMemo<OutstandingInvoice[]>(
     () =>
@@ -183,6 +378,7 @@ export default function OutstandingPage() {
 
       <main className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
         {error && <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</div>}
+        {success && <div className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">{success}</div>}
 
         <section className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -238,7 +434,7 @@ export default function OutstandingPage() {
                       <td className="px-4 py-4 text-right text-slate-700">{money(invoice.total)}</td>
                       <td className="px-4 py-4 text-right text-emerald-700">{money(invoice.paid_amount)}</td>
                       <td className="px-4 py-4 text-right font-bold text-red-600">{money(invoice.balance)}</td>
-                      <td className="px-5 py-4 text-right"><div className="flex justify-end gap-2"><button onClick={() => sendPaymentReminder(invoice)} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700">WhatsApp</button><Link href={`/sales/invoice/${invoice.id}`} className="inline-flex rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">View invoice</Link></div></td>
+                      <td className="px-5 py-4 text-right"><div className="flex justify-end gap-2"><button onClick={() => sendPaymentReminder(invoice)} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700">WhatsApp</button><Link href={`/sales/invoice/${invoice.id}`} className="inline-flex rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">View invoice</Link>{Number(invoice.paid_amount || 0) === 0 && <button type="button" onClick={() => deleteOutstandingInvoice(invoice)} disabled={deletingId === invoice.id} className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60">{deletingId === invoice.id ? "Deleting..." : "Delete"}</button>}</div></td>
                     </tr>
                   ))}
                 </tbody>
