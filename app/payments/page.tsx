@@ -292,7 +292,7 @@ export default function PaymentsPage() {
   }, []);
 
   useEffect(() => {
-    loadData();
+    void Promise.resolve().then(() => loadData());
   }, [loadData]);
 
   /*
@@ -520,30 +520,6 @@ export default function PaymentsPage() {
         (item) => item.id === form.sale_id
       );
 
-      let paymentPayloads: Array<{
-        customer_id: string;
-        sale_id: string | null;
-        payment_date: string;
-        amount: number;
-        payment_method: string;
-        reference_number: string | null;
-        notes: string | null;
-        received_by: string;
-      }> = [];
-
-      const sharedPaymentFields = {
-        customer_id: form.customer_id,
-        payment_date: new Date().toISOString(),
-        payment_method:
-          form.payment_method || "cash",
-        reference_number:
-          form.reference_number.trim() ||
-          null,
-        notes: form.notes.trim() || null,
-        received_by:
-          sessionData.session.user.id,
-      };
-
       const allocations: Array<{
         sale_id: string;
         amount: number;
@@ -561,23 +537,10 @@ export default function PaymentsPage() {
           invoiceBalance
         );
 
-        const creditAmount = Math.max(
-          amount - invoiceBalance,
-          0
-        );
-
         if (amountAppliedToInvoice > 0) {
           allocations.push({
             sale_id: sale.id,
             amount: amountAppliedToInvoice,
-          });
-        }
-
-        if (creditAmount > 0) {
-          paymentPayloads.push({
-            ...sharedPaymentFields,
-            sale_id: null,
-            amount: creditAmount,
           });
         }
       } else {
@@ -620,128 +583,37 @@ export default function PaymentsPage() {
             remainingAmount -= allocate;
           }
         }
-
-        if (remainingAmount > 0) {
-          paymentPayloads.push({
-            ...sharedPaymentFields,
-            sale_id: null,
-            amount: remainingAmount,
-          });
-        }
       }
 
-      if (allocations.length > 0) {
-        for (const allocation of allocations) {
-          paymentPayloads.push({
-            ...sharedPaymentFields,
-            sale_id: allocation.sale_id,
-            amount: allocation.amount,
-          });
-        }
-      }
-
-      if (paymentPayloads.length === 0) {
-        paymentPayloads.push({
-          ...sharedPaymentFields,
-          sale_id: null,
-          amount,
+      const { data: paymentResult, error: paymentError } =
+        await supabase.rpc("record_customer_payment_batch", {
+          p_customer_id: form.customer_id,
+          p_amount: amount,
+          p_payment_method: form.payment_method || "cash",
+          p_reference_number:
+            form.reference_number.trim() || null,
+          p_notes: form.notes.trim() || null,
+          p_allocations: allocations,
         });
-      }
 
-      // payment_number is required by the payment ledger. Generate one per
-      // allocation because a single customer payment can be split across
-      // multiple invoices.
-      paymentPayloads = paymentPayloads.map((payload, index) => ({
-        ...payload,
-        payment_number: `PAY-${Date.now()}-${index}-${crypto.randomUUID().slice(0, 6)}`,
-      })) as typeof paymentPayloads;
-
-      const {
-        error: insertError,
-      } = await supabase
-        .from("customer_payments")
-        .insert(paymentPayloads);
-
-      if (insertError) {
+      if (paymentError) {
         throw new Error(
-          "Unable to record payment: " +
-            insertError.message
+          "Unable to record payment: " + paymentError.message
         );
       }
 
-      const updateSalePromises = allocations.map(
-        async (allocation) => {
-          const saleToUpdate = sales.find(
-            (item) => item.id === allocation.sale_id
-          );
-
-          if (!saleToUpdate) {
-            return;
-          }
-
-          const currentPaid =
-            toNumber(saleToUpdate.paid_amount);
-          const saleTotal =
-            toNumber(saleToUpdate.total);
-
-          const newPaidAmount = Math.min(
-            currentPaid + allocation.amount,
-            saleTotal
-          );
-
-          const newBalance = Math.max(
-            saleTotal - newPaidAmount,
-            0
-          );
-
-          let paymentStatus =
-            "unpaid";
-
-          if (newBalance <= 0) {
-            paymentStatus = "paid";
-          } else if (
-            newPaidAmount > 0
-          ) {
-            paymentStatus = "partial";
-          }
-
-          const {
-            error: updateSaleError,
-          } = await supabase
-            .from("sales")
-            .update({
-              paid_amount:
-                newPaidAmount,
-              payment_status:
-                paymentStatus,
-            })
-            .eq("id", allocation.sale_id);
-
-          if (updateSaleError) {
-            throw new Error(
-              "Payment was recorded, but an invoice could not be updated: " +
-                updateSaleError.message
-            );
-          }
-        }
-      );
-
-      await Promise.all(updateSalePromises);
+      const result = paymentResult as {
+        applied?: unknown;
+        credit?: unknown;
+      } | null;
+      const totalAllocated = toNumber(result?.applied);
+      const totalCredit = toNumber(result?.credit);
 
       /*
        * =====================================================
        * SUCCESS MESSAGE
        * =====================================================
        */
-
-      const totalAllocated = allocations.reduce(
-        (sum, allocation) => sum + allocation.amount,
-        0
-      );
-
-      const totalCredit = paymentPayloads
-        .filter((payment) => payment.sale_id === null)
-        .reduce((sum, payment) => sum + payment.amount, 0);
 
       if (totalCredit > 0) {
         alert(
@@ -797,9 +669,9 @@ export default function PaymentsPage() {
    * =========================================================
    */
 
-  function getCustomerName(
+  const getCustomerName = useCallback((
     customerId: string | null
-  ): string {
+  ): string => {
     if (!customerId) {
       return "Unknown Customer";
     }
@@ -812,7 +684,7 @@ export default function PaymentsPage() {
       customer?.name ||
       "Unknown Customer"
     );
-  }
+  }, [customers]);
 
   /*
    * =========================================================
@@ -820,9 +692,9 @@ export default function PaymentsPage() {
    * =========================================================
    */
 
-  function getInvoiceNumber(
+  const getInvoiceNumber = useCallback((
     saleId: string | null
-  ): string {
+  ): string => {
     if (!saleId) {
       return "-";
     }
@@ -834,7 +706,7 @@ export default function PaymentsPage() {
     return (
       sale?.invoice_number || "-"
     );
-  }
+  }, [sales]);
 
   /*
    * =========================================================
@@ -954,10 +826,10 @@ export default function PaymentsPage() {
       }
     );
   }, [
+    getCustomerName,
+    getInvoiceNumber,
     payments,
     search,
-    customers,
-    sales,
   ]);
 
   /*

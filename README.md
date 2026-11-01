@@ -1,5 +1,11 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Database migrations
+
+SQL files in `migrations/` are not applied by Next.js or Vercel deployments. For a database change, run the new migration in the SQL Editor of the Supabase project connected to the deployed app, confirm it succeeds, and verify the affected data afterward. Use a new, unique, increasing migration number for each change. Do not rerun older migrations without checking their contents; some are one-time data changes.
+
+The customer balance view is maintained by `migrations/020_fix_customer_balances_paid_amount.sql`. It treats `sales.paid_amount` as the amount paid on invoices and applies only unallocated customer credits separately. Invoice payments recorded from the Payments page use the atomic database function in `migrations/021_atomic_customer_payment_batch.sql`, so payment-ledger rows and invoice balances cannot be left half-updated.
+
 ## Getting Started
 
 First, run the development server:
