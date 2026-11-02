@@ -8,9 +8,11 @@ type ReportMetrics = {
   salesTotal: number;
   paymentsTotal: number;
   outstandingBalance: number;
+  outstandingPurchases: number;
   productsCount: number;
   lowStockCount: number;
   expensesTotal: number;
+  totalJobs: number;
 };
 
 type ReportCategory =
@@ -113,6 +115,11 @@ type SupplierTableRecord = {
   is_active?: boolean;
   created_at: string;
 };
+type PurchaseBalanceRecord = {
+  total_amount: number;
+  paid_amount: number;
+};
+type JobMetricsRecord = { id: string };
 
 async function fetchAllPages<T>(
   loadPage: (from: number, to: number) => Promise<PageResult<T>>
@@ -135,9 +142,11 @@ const emptyMetrics: ReportMetrics = {
   salesTotal: 0,
   paymentsTotal: 0,
   outstandingBalance: 0,
+  outstandingPurchases: 0,
   productsCount: 0,
   lowStockCount: 0,
   expensesTotal: 0,
+  totalJobs: 0,
 };
 
 const categories: { value: ReportCategory; label: string }[] = [
@@ -319,7 +328,7 @@ export default function ReportsPage() {
       setLoading(true);
       setError("");
 
-      const [sales, payments, outstandingRows, products, expenses] =
+      const [sales, payments, outstandingRows, products, expenses, purchases, jobs] =
         await Promise.all([
           fetchAllPages<{ total: number }>(async (from, to) => {
             const { data, error } = await supabase
@@ -367,6 +376,25 @@ export default function ReportsPage() {
               .range(from, to);
             return { data: data as unknown as { amount: number }[] | null, error };
           }),
+          fetchAllPages<PurchaseBalanceRecord>(async (from, to) => {
+            const { data, error } = await supabase
+              .from("purchases")
+              .select("total_amount, paid_amount")
+              .order("id", { ascending: true })
+              .range(from, to);
+            return {
+              data: data as unknown as PurchaseBalanceRecord[] | null,
+              error,
+            };
+          }),
+          fetchAllPages<JobMetricsRecord>(async (from, to) => {
+            const { data, error } = await supabase
+              .from("orders")
+              .select("id")
+              .order("id", { ascending: true })
+              .range(from, to);
+            return { data: data as unknown as JobMetricsRecord[] | null, error };
+          }),
         ]);
 
       const trackedProducts = products.filter(
@@ -381,6 +409,15 @@ export default function ReportsPage() {
           (sum, customer) => sum + amount(customer.amount),
           0
         ),
+        outstandingPurchases: purchases.reduce(
+          (sum, purchase) =>
+            sum +
+            Math.max(
+              amount(purchase.total_amount) - amount(purchase.paid_amount),
+              0
+            ),
+          0
+        ),
         productsCount: trackedProducts.length,
         lowStockCount: trackedProducts.filter(
           (product) =>
@@ -390,6 +427,7 @@ export default function ReportsPage() {
           (sum, item) => sum + amount(item.amount),
           0
         ),
+        totalJobs: jobs.length,
       });
     } catch (err) {
       console.error("Reports load error:", err);
@@ -637,9 +675,12 @@ export default function ReportsPage() {
           ) : null}
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <MetricCard label="Total Sales" value={loading ? "Loading…" : money(metrics.salesTotal)} detail={`${metrics.salesCount} invoices`} />
+            <MetricCard label="Total Sales" value={loading ? "Loading…" : money(metrics.salesTotal)} detail="Total value of all recorded sales" />
+            <MetricCard label="Total Invoices" value={loading ? "Loading…" : metrics.salesCount.toLocaleString()} detail="All recorded invoices" />
             <MetricCard label="Payments Received" value={loading ? "Loading…" : money(metrics.paymentsTotal)} detail="Invoice and customer credit payments" />
             <MetricCard label="Outstanding Balance" value={loading ? "Loading…" : money(metrics.outstandingBalance)} detail="Calculated from invoice paid amounts and unapplied credits" />
+            <MetricCard label="Total Outstanding Purchases" value={loading ? "Loading…" : money(metrics.outstandingPurchases)} detail="Unpaid supplier purchase balances" />
+            <MetricCard label="Total Jobs" value={loading ? "Loading…" : metrics.totalJobs.toLocaleString()} detail="All recorded production jobs" />
             <MetricCard label="Tracked Products" value={loading ? "Loading…" : metrics.productsCount.toLocaleString()} detail="Active products with stock tracking" />
             <MetricCard label="Low Stock" value={loading ? "Loading…" : metrics.lowStockCount.toLocaleString()} detail="Tracked products at or below minimum stock" />
             <MetricCard label="Expenses" value={loading ? "Loading…" : money(metrics.expensesTotal)} detail="All recorded costs" />
