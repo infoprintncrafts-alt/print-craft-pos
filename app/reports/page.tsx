@@ -9,6 +9,8 @@ type ReportMetrics = {
   paymentsTotal: number;
   outstandingBalance: number;
   outstandingPurchases: number;
+  purchasesTotal: number;
+  activeProductsCount: number;
   productsCount: number;
   lowStockCount: number;
   expensesTotal: number;
@@ -143,6 +145,8 @@ const emptyMetrics: ReportMetrics = {
   paymentsTotal: 0,
   outstandingBalance: 0,
   outstandingPurchases: 0,
+  purchasesTotal: 0,
+  activeProductsCount: 0,
   productsCount: 0,
   lowStockCount: 0,
   expensesTotal: 0,
@@ -422,6 +426,11 @@ export default function ReportsPage() {
               ),
             0
           ),
+          purchasesTotal: purchases.reduce(
+            (sum, purchase) => sum + amount(purchase.total_amount),
+            0
+          ),
+          activeProductsCount: products.filter((product) => product.is_active).length,
           productsCount: trackedProducts.length,
           lowStockCount: trackedProducts.filter(
             (product) =>
@@ -686,11 +695,12 @@ export default function ReportsPage() {
             <MetricCard label="Total Invoices" value={loading ? "Loading…" : metrics.salesCount.toLocaleString()} detail="All recorded invoices" />
             <MetricCard label="Payments Received" value={loading ? "Loading…" : money(metrics.paymentsTotal)} detail="Invoice and customer credit payments" />
             <MetricCard label="Outstanding Balance" value={loading ? "Loading…" : money(metrics.outstandingBalance)} detail="Calculated from invoice paid amounts and unapplied credits" />
+            <MetricCard label="Total Purchases" value={loading ? "Loading…" : money(metrics.purchasesTotal)} detail="Sum of recorded supplier purchase totals" />
             <MetricCard label="Total Outstanding Purchases" value={loading ? "Loading…" : money(metrics.outstandingPurchases)} detail="Unpaid supplier purchase balances" />
             <MetricCard label="Total Jobs" value={loading ? "Loading…" : metrics.totalJobs.toLocaleString()} detail="All recorded production jobs" />
-            <MetricCard label="Tracked Products" value={loading ? "Loading…" : metrics.productsCount.toLocaleString()} detail="Active products with stock tracking" />
-            <MetricCard label="Low Stock" value={loading ? "Loading…" : metrics.lowStockCount.toLocaleString()} detail="Tracked products at or below minimum stock" />
-            <MetricCard label="Expenses" value={loading ? "Loading…" : money(metrics.expensesTotal)} detail="All recorded costs" />
+            <MetricCard label="Tracked Products" value={loading ? "Loading…" : metrics.productsCount.toLocaleString()} detail={loading ? "Loading…" : `${metrics.productsCount} of ${metrics.activeProductsCount} active products have stock tracking enabled`} />
+            <MetricCard label="Low Stock" value={loading ? "Loading…" : metrics.lowStockCount.toLocaleString()} detail={loading ? "Loading…" : metrics.productsCount === 0 ? "Enable stock tracking on active products to monitor low stock" : "Active tracked products at or below minimum stock"} />
+            <MetricCard label="Expenses" value={loading ? "Loading…" : money(metrics.expensesTotal)} detail="Direct expense records; purchases are shown separately" />
           </div>
         </section>
 
