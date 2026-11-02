@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 type ReportMetrics = {
   salesCount: number;
   salesTotal: number;
+  profitEarned: number;
   paymentsTotal: number;
   outstandingBalance: number;
   outstandingPurchases: number;
@@ -121,6 +122,19 @@ type PurchaseBalanceRecord = {
   total_amount: number;
   paid_amount: number;
 };
+type SaleProfitRecord = {
+  id: string;
+  total: number;
+  discount: number;
+};
+type SaleItemProfitRecord = {
+  sale_id: string;
+  product_id: string | null;
+  quantity: number;
+  discount: number;
+  total: number;
+};
+type ReturnProfitRecord = { refund_amount: number };
 type JobMetricsRecord = { id: string };
 
 async function fetchAllPages<T>(
@@ -142,6 +156,7 @@ async function fetchAllPages<T>(
 const emptyMetrics: ReportMetrics = {
   salesCount: 0,
   salesTotal: 0,
+  profitEarned: 0,
   paymentsTotal: 0,
   outstandingBalance: 0,
   outstandingPurchases: 0,
@@ -335,15 +350,15 @@ export default function ReportsPage() {
       setLoading(true);
       setError("");
 
-      const [sales, payments, outstandingRows, products, expenses, purchases, jobs] =
+      const [sales, payments, outstandingRows, products, expenses, purchases, jobs, saleItems, returns] =
         await Promise.all([
-          fetchAllPages<{ total: number }>(async (from, to) => {
+          fetchAllPages<SaleProfitRecord>(async (from, to) => {
             const { data, error } = await supabase
               .from("sales")
-              .select("total")
+              .select("id, total, discount")
               .order("id", { ascending: true })
               .range(from, to);
-            return { data: data as unknown as { total: number }[] | null, error };
+            return { data: data as unknown as SaleProfitRecord[] | null, error };
           }),
           fetchAllPages<{ amount: number }>(async (from, to) => {
             const { data, error } = await supabase
@@ -355,6 +370,8 @@ export default function ReportsPage() {
           }),
           loadOutstandingRows(),
           fetchAllPages<{
+            id: string;
+            cost_price: number;
             stock_quantity: number;
             minimum_stock: number;
             track_stock: boolean;
@@ -362,11 +379,13 @@ export default function ReportsPage() {
           }>(async (from, to) => {
             const { data, error } = await supabase
               .from("products")
-              .select("stock_quantity, minimum_stock, track_stock, is_active")
+              .select("id, cost_price, stock_quantity, minimum_stock, track_stock, is_active")
               .order("id", { ascending: true })
               .range(from, to);
             return {
               data: data as unknown as {
+                id: string;
+                cost_price: number;
                 stock_quantity: number;
                 minimum_stock: number;
                 track_stock: boolean;
@@ -402,16 +421,75 @@ export default function ReportsPage() {
               .range(from, to);
             return { data: data as unknown as JobMetricsRecord[] | null, error };
           }),
+          fetchAllPages<SaleItemProfitRecord>(async (from, to) => {
+            const { data, error } = await supabase
+              .from("sale_items")
+              .select("sale_id, product_id, quantity, discount, total")
+              .order("sale_id", { ascending: true })
+              .range(from, to);
+            return { data: data as unknown as SaleItemProfitRecord[] | null, error };
+          }),
+          fetchAllPages<ReturnProfitRecord>(async (from, to) => {
+            const { data, error } = await supabase
+              .from("returns")
+              .select("refund_amount")
+              .order("id", { ascending: true })
+              .range(from, to);
+            return { data: data as unknown as ReturnProfitRecord[] | null, error };
+          }),
         ]);
 
       const trackedProducts = products.filter(
         (product) => product.is_active && product.track_stock
       );
+      const productCosts = new Map(
+        products.map((product) => [product.id, amount(product.cost_price)])
+      );
+      const itemsBySale = new Map<string, SaleItemProfitRecord[]>();
+      for (const item of saleItems) {
+        const saleLines = itemsBySale.get(item.sale_id) ?? [];
+        saleLines.push(item);
+        itemsBySale.set(item.sale_id, saleLines);
+      }
+      const catalogItemMargin = sales.reduce((profit, sale) => {
+        const saleLines = itemsBySale.get(sale.id) ?? [];
+        const itemRevenueTotal = saleLines.reduce(
+          (sum, item) => sum + Math.max(amount(item.total), 0),
+          0
+        );
+        if (itemRevenueTotal <= 0) return profit;
+
+        const itemDiscountTotal = saleLines.reduce(
+          (sum, item) => sum + Math.max(amount(item.discount), 0),
+          0
+        );
+        const invoiceDiscount = Math.max(
+          amount(sale.discount) - itemDiscountTotal,
+          0
+        );
+
+        return profit + saleLines.reduce((saleProfit, item) => {
+          if (!item.product_id || !productCosts.has(item.product_id)) {
+            return saleProfit;
+          }
+
+          const lineRevenue = Math.max(amount(item.total), 0);
+          const discountShare = invoiceDiscount * (lineRevenue / itemRevenueTotal);
+          const cost =
+            productCosts.get(item.product_id)! * Math.max(amount(item.quantity), 0);
+          return saleProfit + lineRevenue - discountShare - cost;
+        }, 0);
+      }, 0);
+      const profitEarned =
+        catalogItemMargin -
+        expenses.reduce((sum, item) => sum + amount(item.amount), 0) -
+        returns.reduce((sum, item) => sum + amount(item.refund_amount), 0);
 
       if (requestId === metricsRequest.current) {
         setMetrics({
           salesCount: sales.length,
           salesTotal: sales.reduce((sum, sale) => sum + amount(sale.total), 0),
+          profitEarned,
           paymentsTotal: payments.reduce((sum, payment) => sum + amount(payment.amount), 0),
           outstandingBalance: outstandingRows.reduce(
             (sum, customer) => sum + amount(customer.amount),
@@ -692,6 +770,7 @@ export default function ReportsPage() {
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <MetricCard label="Total Sales" value={loading ? "Loading…" : money(metrics.salesTotal)} detail="Total value of all recorded sales" />
+            <MetricCard label="Total Profit Earned" value={loading ? "Loading…" : money(metrics.profitEarned)} detail="Estimate: linked item margins at current costs, less expenses and refunds" />
             <MetricCard label="Total Invoices" value={loading ? "Loading…" : metrics.salesCount.toLocaleString()} detail="All recorded invoices" />
             <MetricCard label="Payments Received" value={loading ? "Loading…" : money(metrics.paymentsTotal)} detail="Invoice and customer credit payments" />
             <MetricCard label="Outstanding Balance" value={loading ? "Loading…" : money(metrics.outstandingBalance)} detail="Calculated from invoice paid amounts and unapplied credits" />
