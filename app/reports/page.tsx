@@ -326,7 +326,6 @@ export default function ReportsPage() {
 
   const loadMetrics = useCallback(async () => {
     const requestId = ++metricsRequest.current;
-    const { start, end } = dateBounds(dateFilter);
 
     try {
       setLoading(true);
@@ -355,10 +354,11 @@ export default function ReportsPage() {
             stock_quantity: number;
             minimum_stock: number;
             track_stock: boolean;
+            is_active: boolean;
           }>(async (from, to) => {
             const { data, error } = await supabase
               .from("products")
-              .select("stock_quantity, minimum_stock, track_stock")
+              .select("stock_quantity, minimum_stock, track_stock, is_active")
               .order("id", { ascending: true })
               .range(from, to);
             return {
@@ -366,19 +366,17 @@ export default function ReportsPage() {
                 stock_quantity: number;
                 minimum_stock: number;
                 track_stock: boolean;
+                is_active: boolean;
               }[] | null,
               error,
             };
           }),
           fetchAllPages<{ amount: number }>(async (from, to) => {
-            let query = supabase
+            const { data, error } = await supabase
               .from("expenses")
               .select("amount")
-              .order("expense_date", { ascending: true })
-              .order("id", { ascending: true });
-            if (start) query = query.gte("expense_date", start);
-            query = query.lte("expense_date", end);
-            const { data, error } = await query.range(from, to);
+              .order("id", { ascending: true })
+              .range(from, to);
             return { data: data as unknown as { amount: number }[] | null, error };
           }),
           fetchAllPages<PurchaseBalanceRecord>(async (from, to) => {
@@ -402,7 +400,9 @@ export default function ReportsPage() {
           }),
         ]);
 
-      const trackedProducts = products.filter((product) => product.track_stock);
+      const trackedProducts = products.filter(
+        (product) => product.is_active && product.track_stock
+      );
 
       if (requestId === metricsRequest.current) {
         setMetrics({
@@ -442,7 +442,7 @@ export default function ReportsPage() {
     } finally {
       if (requestId === metricsRequest.current) setLoading(false);
     }
-  }, [dateFilter]);
+  }, []);
 
   const loadTable = useCallback(async () => {
     const requestId = ++tableRequest.current;
@@ -534,6 +534,7 @@ export default function ReportsPage() {
             .from("products")
             .select("*")
             .eq("track_stock", true)
+            .eq("is_active", true)
             .order("name", { ascending: true })
             .order("id", { ascending: true })
             .range(from, to);
@@ -689,7 +690,7 @@ export default function ReportsPage() {
             <MetricCard label="Total Jobs" value={loading ? "Loading…" : metrics.totalJobs.toLocaleString()} detail="All recorded production jobs" />
             <MetricCard label="Tracked Products" value={loading ? "Loading…" : metrics.productsCount.toLocaleString()} detail="Active products with stock tracking" />
             <MetricCard label="Low Stock" value={loading ? "Loading…" : metrics.lowStockCount.toLocaleString()} detail="Tracked products at or below minimum stock" />
-            <MetricCard label="Expenses" value={loading ? "Loading…" : money(metrics.expensesTotal)} detail={`For the selected ${getDateFilterLabel(dateFilter).toLowerCase()} period`} />
+            <MetricCard label="Expenses" value={loading ? "Loading…" : money(metrics.expensesTotal)} detail="All recorded costs" />
           </div>
         </section>
 
