@@ -55,11 +55,6 @@ export default function ProductsPage() {
     description: "",
   });
 
-  function generateSku(name: string) {
-    const base = name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 16) || "PRODUCT";
-    return `${base}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
-  }
-
   // =========================================================
   // LOAD PRODUCTS
   // =========================================================
@@ -183,18 +178,11 @@ export default function ProductsPage() {
 
     try {
       setSaving(true);
-      const generatedSku = form.sku.trim() || generateSku(form.name);
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("products")
         .insert({
           name: form.name.trim(),
-
-          sku:
-            generatedSku,
-
-          product_code:
-            generatedSku,
 
           category:
             form.category.trim() || null,
@@ -224,14 +212,16 @@ export default function ProductsPage() {
             form.description.trim() || null,
 
           is_active: true,
-        });
+        })
+        .select("sku")
+        .single();
 
       if (error) {
         throw new Error(error.message);
       }
 
       alert(
-        "Product/service added successfully."
+        `Product/service added successfully. SKU: ${data.sku}`
       );
 
       resetForm();
@@ -313,12 +303,6 @@ export default function ProductsPage() {
         .from("products")
         .update({
           name: form.name.trim(),
-
-          sku:
-            form.sku.trim() || null,
-
-          product_code:
-            form.sku.trim() || null,
 
           category:
             form.category.trim() || null,
@@ -830,20 +814,16 @@ export default function ProductsPage() {
 
               <div>
                 <label className="mb-1 block text-sm font-medium">
-                  SKU / Product Code
+                  SKU / Product Code (auto-generated)
                 </label>
 
                 <input
                   type="text"
                   value={form.sku}
-                  onChange={(e) =>
-                    updateField(
-                      "sku",
-                      e.target.value
-                    )
-                  }
-                  placeholder="Example: TSHIRT-001"
-                  className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-black"
+                  inputMode="numeric"
+                  readOnly
+                  placeholder={editing ? "Numeric code" : "Assigned automatically when saved"}
+                  className="w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-slate-600"
                 />
               </div>
 

@@ -33,6 +33,7 @@ export default function CustomersListPage() {
   const [search, setSearch] = useState("");
 
   const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [saving, setSaving] = useState(false);
 
   const [newName, setNewName] = useState("");
@@ -149,6 +150,7 @@ export default function CustomersListPage() {
   // =========================================================
 
   function openAddCustomer() {
+    setEditingCustomer(null);
     setNewName("");
     setNewPhone("");
     setNewWhatsapp("");
@@ -159,7 +161,21 @@ export default function CustomersListPage() {
     setShowAddCustomer(true);
   }
 
-  async function addCustomer() {
+  function openEditCustomer(customer: Customer) {
+    setEditingCustomer(customer);
+    setNewName(customer.name);
+    setNewPhone(customer.phone ?? "");
+    setNewWhatsapp(customer.whatsapp ?? "");
+    setNewEmail(customer.email ?? "");
+    setNewAddress(customer.address ?? "");
+    setNewCreditLimit(
+      customer.credit_limit === null ? "" : String(customer.credit_limit)
+    );
+    setNewNotes(customer.notes ?? "");
+    setShowAddCustomer(true);
+  }
+
+  async function saveCustomer() {
     const name = newName.trim();
 
     if (!name) {
@@ -179,7 +195,7 @@ export default function CustomersListPage() {
     try {
       setSaving(true);
 
-      const { error } = await supabase.from("customers").insert({
+      const customerDetails = {
         name,
         phone: newPhone.trim() || null,
         whatsapp: newWhatsapp.trim() || null,
@@ -187,20 +203,102 @@ export default function CustomersListPage() {
         address: newAddress.trim() || null,
         credit_limit: creditLimit,
         notes: newNotes.trim() || null,
-        is_active: true,
-      });
+        updated_at: new Date().toISOString(),
+      };
+
+      const result = editingCustomer
+        ? await supabase
+            .from("customers")
+            .update(customerDetails)
+            .eq("id", editingCustomer.id)
+        : await supabase.from("customers").insert({
+            ...customerDetails,
+            is_active: true,
+          });
+
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
+      setShowAddCustomer(false);
+      setEditingCustomer(null);
+      await loadData();
+    } catch (error) {
+      console.error("Save customer error:", error);
+
+      alert(
+        error instanceof Error ? error.message : "Unable to save customer."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleCustomerStatus(customer: Customer) {
+    const nextIsActive = !customer.is_active;
+
+    try {
+      setSaving(true);
+
+      const { error } = await supabase
+        .from("customers")
+        .update({
+          is_active: nextIsActive,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", customer.id);
 
       if (error) {
         throw new Error(error.message);
       }
 
-      setShowAddCustomer(false);
       await loadData();
     } catch (error) {
-      console.error("Add customer error:", error);
+      console.error("Update customer status error:", error);
 
       alert(
-        error instanceof Error ? error.message : "Unable to add customer."
+        error instanceof Error
+          ? error.message
+          : "Unable to update customer status."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteCustomer(customer: Customer) {
+    const outstanding = balances[customer.id]?.outstanding_balance ?? 0;
+    const outstandingNotice =
+      outstanding > 0
+        ? `\nOutstanding balance: ${money(outstanding)}.`
+        : "";
+
+    const confirmed = window.confirm(
+      `Delete ${customer.name}?${outstandingNotice}\n\nRelated sales, payments, and orders will remain, but will no longer be linked to this customer.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const { error } = await supabase
+        .from("customers")
+        .delete()
+        .eq("id", customer.id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      await loadData();
+    } catch (error) {
+      console.error("Delete customer error:", error);
+
+      alert(
+        error instanceof Error ? error.message : "Unable to delete customer."
       );
     } finally {
       setSaving(false);
@@ -305,6 +403,10 @@ export default function CustomersListPage() {
                     <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wide text-slate-600">
                       Status
                     </th>
+
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wide text-slate-600">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
 
@@ -365,6 +467,37 @@ export default function CustomersListPage() {
                             {customer.is_active ? "Active" : "Inactive"}
                           </span>
                         </td>
+
+                        <td className="px-4 py-4 text-right align-middle">
+                          <div className="flex justify-end gap-2 whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => openEditCustomer(customer)}
+                              disabled={saving}
+                              className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                            >
+                              Edit
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => toggleCustomerStatus(customer)}
+                              disabled={saving}
+                              className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                            >
+                              {customer.is_active ? "Deactivate" : "Activate"}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => deleteCustomer(customer)}
+                              disabled={saving}
+                              className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}
@@ -383,7 +516,9 @@ export default function CustomersListPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl">
             <div className="mb-4">
-              <h2 className="text-xl font-black">Add Customer</h2>
+              <h2 className="text-xl font-black">
+                {editingCustomer ? "Edit Customer" : "Add Customer"}
+              </h2>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -484,7 +619,11 @@ export default function CustomersListPage() {
             <div className="mt-5 flex gap-2">
               <button
                 type="button"
-                onClick={() => setShowAddCustomer(false)}
+                disabled={saving}
+                onClick={() => {
+                  setShowAddCustomer(false);
+                  setEditingCustomer(null);
+                }}
                 className="flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold"
               >
                 Cancel
@@ -493,10 +632,14 @@ export default function CustomersListPage() {
               <button
                 type="button"
                 disabled={saving}
-                onClick={addCustomer}
+                onClick={saveCustomer}
                 className="flex-1 rounded-xl bg-black px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
               >
-                {saving ? "Saving..." : "Add Customer"}
+                {saving
+                  ? "Saving..."
+                  : editingCustomer
+                    ? "Save Changes"
+                    : "Add Customer"}
               </button>
             </div>
           </div>
