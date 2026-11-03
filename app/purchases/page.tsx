@@ -120,6 +120,7 @@ export default function PurchasesPage() {
       purchase_date: new Date(date).toISOString(),
       total_amount: total,
       payment_status: status,
+      paid_amount: status === "paid" ? total : 0,
       notes: notes.trim() || null,
     };
     let id = editingId;
@@ -359,8 +360,10 @@ export default function PurchasesPage() {
                     >
                       <option value="pending">Pending</option>
                       <option value="paid">Paid</option>
-                      <option value="partial">Partial</option>
                     </select>
+                    <span className="self-center text-xs text-slate-500">
+                      Record partial payments after saving.
+                    </span>
                     <button
                       disabled={saving}
                       className="rounded-xl bg-black px-5 py-3 text-sm font-bold text-white"

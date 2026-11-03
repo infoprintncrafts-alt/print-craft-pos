@@ -119,9 +119,12 @@ type SupplierTableRecord = {
   created_at: string;
 };
 type PurchaseBalanceRecord = {
+  id: string;
   total_amount: number;
   paid_amount: number;
+  payment_status: string | null;
 };
+type SupplierPaymentRecord = { purchase_id: string; amount: number };
 type SaleProfitRecord = {
   id: string;
   total: number;
@@ -350,8 +353,18 @@ export default function ReportsPage() {
       setLoading(true);
       setError("");
 
-      const [sales, payments, outstandingRows, products, expenses, purchases, jobs, saleItems, returns] =
-        await Promise.all([
+      const [
+        sales,
+        payments,
+        outstandingRows,
+        products,
+        expenses,
+        purchases,
+        supplierPayments,
+        jobs,
+        saleItems,
+        returns,
+      ] = await Promise.all([
           fetchAllPages<SaleProfitRecord>(async (from, to) => {
             const { data, error } = await supabase
               .from("sales")
@@ -405,11 +418,22 @@ export default function ReportsPage() {
           fetchAllPages<PurchaseBalanceRecord>(async (from, to) => {
             const { data, error } = await supabase
               .from("purchases")
-              .select("total_amount, paid_amount")
+              .select("id, total_amount, paid_amount, payment_status")
               .order("id", { ascending: true })
               .range(from, to);
             return {
               data: data as unknown as PurchaseBalanceRecord[] | null,
+              error,
+            };
+          }),
+          fetchAllPages<SupplierPaymentRecord>(async (from, to) => {
+            const { data, error } = await supabase
+              .from("supplier_payments")
+              .select("purchase_id, amount")
+              .order("id", { ascending: true })
+              .range(from, to);
+            return {
+              data: data as unknown as SupplierPaymentRecord[] | null,
               error,
             };
           }),
@@ -484,6 +508,14 @@ export default function ReportsPage() {
         catalogItemMargin -
         expenses.reduce((sum, item) => sum + amount(item.amount), 0) -
         returns.reduce((sum, item) => sum + amount(item.refund_amount), 0);
+      const supplierPaymentsByPurchase = new Map<string, number>();
+      for (const payment of supplierPayments) {
+        supplierPaymentsByPurchase.set(
+          payment.purchase_id,
+          (supplierPaymentsByPurchase.get(payment.purchase_id) ?? 0) +
+            Math.max(amount(payment.amount), 0)
+        );
+      }
 
       if (requestId === metricsRequest.current) {
         setMetrics({
@@ -496,12 +528,20 @@ export default function ReportsPage() {
             0
           ),
           outstandingPurchases: purchases.reduce(
-            (sum, purchase) =>
-              sum +
-              Math.max(
-                amount(purchase.total_amount) - amount(purchase.paid_amount),
-                0
-              ),
+            (sum, purchase) => {
+              const total = Math.max(amount(purchase.total_amount), 0);
+              const paid =
+                purchase.payment_status?.toLowerCase() === "paid"
+                  ? total
+                  : Math.min(
+                      Math.max(
+                        amount(purchase.paid_amount),
+                        supplierPaymentsByPurchase.get(purchase.id) ?? 0
+                      ),
+                      total
+                    );
+              return sum + Math.max(total - paid, 0);
+            },
             0
           ),
           purchasesTotal: purchases.reduce(
