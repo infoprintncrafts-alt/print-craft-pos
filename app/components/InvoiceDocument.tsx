@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 
 type InvoiceSale = {
@@ -110,7 +111,15 @@ export default function InvoiceDocument({
     const gross = quantity * unitPrice;
     const discount = Math.min(Math.max(Number(item.discount || 0), 0), gross);
 
-    return { item, quantity, unitPrice, gross, discount, amount: Math.max(gross - discount, 0) };
+    return {
+      item,
+      quantity,
+      unitPrice,
+      gross,
+      discount,
+      unitDiscount: quantity > 0 ? discount / quantity : 0,
+      amount: Math.max(gross - discount, 0),
+    };
   });
 
   const subtotal = itemRows.reduce((sum, row) => sum + row.gross, 0);
@@ -147,6 +156,13 @@ export default function InvoiceDocument({
         <header className="border-b-2 border-slate-900 pb-5">
           <div className="flex flex-wrap items-start justify-between gap-5">
             <div>
+              <Image
+                src="/logo.png"
+                width={7023}
+                height={1948}
+                alt="Print & Craft logo"
+                className="mb-2 h-auto w-36 object-contain sm:w-44 print:w-40"
+              />
               <h1 className="text-xl font-black tracking-tight sm:text-2xl">{BUSINESS.name}</h1>
               <p className="mt-1 text-[10px] font-bold tracking-[0.14em] text-slate-600">{BUSINESS.tagline}</p>
               <div className="mt-3 space-y-1 text-xs leading-4 text-slate-600">
@@ -196,10 +212,10 @@ export default function InvoiceDocument({
           <table className="w-full table-fixed border-collapse text-[10px] sm:text-xs">
             <colgroup>
               <col className="w-[7%]" />
-              <col className="w-[33%]" />
-              <col className="w-[8%]" />
+              <col className="w-[30%]" />
+              <col className="w-[7%]" />
               <col className="w-[18%]" />
-              <col className="w-[16%]" />
+              <col className="w-[20%]" />
               <col className="w-[18%]" />
             </colgroup>
             <thead className="bg-slate-100">
@@ -208,7 +224,7 @@ export default function InvoiceDocument({
                 <th className="border border-slate-400 px-2 py-2 text-left">Description</th>
                 <th className="border border-slate-400 px-1 py-2 text-center">Qty</th>
                 <th className="border border-slate-400 px-1 py-2 text-right">Unit Price (LKR)</th>
-                <th className="border border-slate-400 px-1 py-2 text-right">Discount (LKR)</th>
+                <th className="border border-slate-400 px-1 py-2 text-right">Item Discount (LKR)</th>
                 <th className="border border-slate-400 px-1 py-2 text-right">Amount (LKR)</th>
               </tr>
             </thead>
@@ -219,7 +235,7 @@ export default function InvoiceDocument({
                   <td className="break-words border border-slate-300 px-2 py-2">{row.item.item_name}</td>
                   <td className="border border-slate-300 px-1 py-2 text-center">{row.quantity}</td>
                   <td className="border border-slate-300 px-1 py-2 text-right whitespace-nowrap">{money(row.unitPrice)}</td>
-                  <td className="border border-slate-300 px-1 py-2 text-right whitespace-nowrap">{row.discount > 0 ? money(row.discount) : "-"}</td>
+                  <td className="border border-slate-300 px-1 py-2 text-right whitespace-nowrap">{money(row.unitDiscount)}</td>
                   <td className="border border-slate-300 px-1 py-2 text-right font-semibold whitespace-nowrap">{money(row.amount)}</td>
                 </tr>
               )) : (
