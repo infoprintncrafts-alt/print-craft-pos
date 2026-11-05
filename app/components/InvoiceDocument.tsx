@@ -42,6 +42,9 @@ const BUSINESS = {
   phone: "0757138882",
   whatsapp: "0757138882",
   email: "info.printncrafts@gmail.com",
+  bankAccountNumber: "16 90 20 157 157",
+  bankAccountName: "MJM HASSAN",
+  bank: "HNB",
 };
 
 function money(value: number) {
@@ -170,6 +173,33 @@ export default function InvoiceDocument({
                 <p>Tel: {BUSINESS.phone} <span className="px-1">|</span> WhatsApp: {BUSINESS.whatsapp}</p>
                 <p>Email: {BUSINESS.email}</p>
               </div>
+              <div className="invoice-bank-details mt-3 max-w-[360px]">
+                <h3 className="mb-1 text-[10px] font-black uppercase tracking-wide">Bank Transfer Details</h3>
+                <table className="w-full table-fixed border-collapse text-[10px] leading-4">
+                  <colgroup>
+                    <col className="w-[42%]" />
+                    <col className="w-[5%]" />
+                    <col className="w-[53%]" />
+                  </colgroup>
+                  <tbody>
+                    <tr>
+                      <th scope="row" className="border border-slate-300 px-2 py-1 text-left font-semibold">Bank Acc. No.</th>
+                      <td className="border border-slate-300 px-1 py-1 text-center">:</td>
+                      <td className="border border-slate-300 px-2 py-1">{BUSINESS.bankAccountNumber}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row" className="border border-slate-300 px-2 py-1 text-left font-semibold">Account Holder</th>
+                      <td className="border border-slate-300 px-1 py-1 text-center">:</td>
+                      <td className="border border-slate-300 px-2 py-1">{BUSINESS.bankAccountName}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row" className="border border-slate-300 px-2 py-1 text-left font-semibold">Bank</th>
+                      <td className="border border-slate-300 px-1 py-1 text-center">:</td>
+                      <td className="border border-slate-300 px-2 py-1">{BUSINESS.bank}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div className="min-w-52 text-left sm:text-right">
@@ -248,43 +278,15 @@ export default function InvoiceDocument({
         <section className="invoice-summary-grid mt-5 grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(300px,460px)] sm:items-end sm:gap-6">
           <div className="text-xs">
             <h3 className="mb-2 text-xs font-black uppercase tracking-wider">Payment Details</h3>
-            <dl className="space-y-1 border-t border-slate-200 pt-2 leading-5">
-              <div className="flex flex-wrap gap-x-2">
-                <dt className="font-semibold">Payment Method:</dt>
-                <dd>{paymentMethod}</dd>
+            <div className="invoice-payment-cards grid grid-cols-1 gap-2 border-t border-slate-200 pt-2 sm:grid-cols-2">
+              <div className="min-w-0 rounded border border-slate-200 px-2 py-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Payment Method</p>
+                <p className="mt-1 break-words">{paymentMethod}</p>
               </div>
-              <div className="flex flex-wrap gap-x-2">
-                <dt className="font-semibold">Payment Reference:</dt>
-                <dd className="break-all">{paymentReferences.join(", ") || "N/A"}</dd>
+              <div className="min-w-0 rounded border border-slate-200 px-2 py-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Payment Reference</p>
+                <p className="mt-1 break-all">{paymentReferences.join(", ") || "N/A"}</p>
               </div>
-            </dl>
-
-            <div className="invoice-bank-details mt-3">
-              <h4 className="mb-1 font-bold uppercase tracking-wide">Bank Transfer Details:</h4>
-              <table className="w-full border-collapse text-[10px]">
-                <colgroup>
-                  <col className="w-[42%]" />
-                  <col className="w-[5%]" />
-                  <col className="w-[53%]" />
-                </colgroup>
-                <tbody>
-                  <tr>
-                    <th scope="row" className="border border-slate-300 px-2 py-1 text-left font-semibold">Bank Acc. No.</th>
-                    <td className="border border-slate-300 px-1 py-1 text-center">:</td>
-                    <td className="border border-slate-300 px-2 py-1">16 90 20 157 157</td>
-                  </tr>
-                  <tr>
-                    <th scope="row" className="border border-slate-300 px-2 py-1 text-left font-semibold">Account Holder</th>
-                    <td className="border border-slate-300 px-1 py-1 text-center">:</td>
-                    <td className="border border-slate-300 px-2 py-1">MJM HASSAN</td>
-                  </tr>
-                  <tr>
-                    <th scope="row" className="border border-slate-300 px-2 py-1 text-left font-semibold">Bank</th>
-                    <td className="border border-slate-300 px-1 py-1 text-center">:</td>
-                    <td className="border border-slate-300 px-2 py-1">HNB</td>
-                  </tr>
-                </tbody>
-              </table>
             </div>
           </div>
 
@@ -324,9 +326,6 @@ export default function InvoiceDocument({
         <section className="invoice-footer mt-6 border-t border-slate-300 pt-4 text-xs leading-5">
           <h3 className="text-center font-black uppercase tracking-wider">Thank You for Your Business!</h3>
           <p className="mt-1 text-center text-slate-600">We appreciate your support and look forward to serving you again.</p>
-          <p className="mt-3 text-center italic text-slate-600">This is a computer-generated invoice and does not require a signature.</p>
-          <p className="mt-3 text-center font-bold">{BUSINESS.name}</p>
-          <p className="text-center italic text-slate-600">Your Ideas, Our Creativity!</p>
         </section>
       </article>
 
@@ -409,6 +408,10 @@ export default function InvoiceDocument({
 
           .invoice-bank-details {
             break-inside: avoid;
+          }
+
+          .invoice-payment-cards {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
       `}</style>
