@@ -9,6 +9,22 @@ type Setting = {
   value: string;
 };
 
+type InvoiceBankSettings = {
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  branch: string;
+  paymentNote: string;
+};
+
+const DEFAULT_INVOICE_BANK_SETTINGS: InvoiceBankSettings = {
+  bankName: "HNB",
+  accountName: "MJM HASSAN",
+  accountNumber: "16 90 20 157 157",
+  branch: "Kinniya",
+  paymentNote: "Please mention your invoice number as the bank transfer reference and send payment confirmation.",
+};
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Setting[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,6 +33,8 @@ export default function SettingsPage() {
   const [newKey, setNewKey] = useState("");
   const [newValue, setNewValue] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [invoiceBankSettings, setInvoiceBankSettings] = useState(DEFAULT_INVOICE_BANK_SETTINGS);
+  const [savingInvoiceBankSettings, setSavingInvoiceBankSettings] = useState(false);
 
   const recommendedSettings = [
     ["business_name", "PRINT & CRAFT (PVT) LTD."], ["invoice_prefix", "INV-"], ["currency", "LKR"],
@@ -41,12 +59,49 @@ export default function SettingsPage() {
         throw new Error(error.message);
       }
 
-      setSettings((data || []) as Setting[]);
+      const loadedSettings = (data || []) as Setting[];
+      setSettings(loadedSettings);
+      const getSettingValue = (key: string, fallback: string) =>
+        loadedSettings.find((setting) => setting.key === key)?.value || fallback;
+      setInvoiceBankSettings({
+        bankName: getSettingValue("invoice_bank_name", DEFAULT_INVOICE_BANK_SETTINGS.bankName),
+        accountName: getSettingValue("invoice_bank_account_name", DEFAULT_INVOICE_BANK_SETTINGS.accountName),
+        accountNumber: getSettingValue("invoice_bank_account_number", DEFAULT_INVOICE_BANK_SETTINGS.accountNumber),
+        branch: getSettingValue("invoice_bank_branch", DEFAULT_INVOICE_BANK_SETTINGS.branch),
+        paymentNote: getSettingValue("invoice_bank_payment_note", DEFAULT_INVOICE_BANK_SETTINGS.paymentNote),
+      });
     } catch (err) {
       console.error("Settings load error:", err);
       setError(err instanceof Error ? err.message : "Unable to load settings.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function saveInvoiceBankSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSavingInvoiceBankSettings(true);
+    setError("");
+
+    const values = [
+      ["invoice_bank_name", invoiceBankSettings.bankName],
+      ["invoice_bank_account_name", invoiceBankSettings.accountName],
+      ["invoice_bank_account_number", invoiceBankSettings.accountNumber],
+      ["invoice_bank_branch", invoiceBankSettings.branch],
+      ["invoice_bank_payment_note", invoiceBankSettings.paymentNote],
+    ].map(([key, value]) => ({ key, value: value.trim() }));
+
+    try {
+      const { error: saveError } = await supabase
+        .from("settings")
+        .upsert(values, { onConflict: "key" });
+
+      if (saveError) throw new Error(saveError.message);
+      await loadSettings();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to save invoice bank details.");
+    } finally {
+      setSavingInvoiceBankSettings(false);
     }
   }
 
@@ -110,6 +165,41 @@ export default function SettingsPage() {
             {settings.length} setting{settings.length === 1 ? "" : "s"}
           </div>
         </div>
+
+        <form onSubmit={saveInvoiceBankSettings} className="mb-8 rounded-3xl border border-teal-100 bg-teal-50/40 p-6">
+          <div className="mb-5">
+            <h2 className="text-sm font-bold text-teal-950">Invoice bank details</h2>
+            <p className="mt-1 text-sm text-teal-800">These details appear in the bank transfer section of every invoice.</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="text-sm font-semibold text-slate-700">
+              Bank name
+              <input value={invoiceBankSettings.bankName} onChange={(event) => setInvoiceBankSettings((current) => ({ ...current, bankName: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-normal" />
+            </label>
+            <label className="text-sm font-semibold text-slate-700">
+              Account name
+              <input value={invoiceBankSettings.accountName} onChange={(event) => setInvoiceBankSettings((current) => ({ ...current, accountName: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-normal" />
+            </label>
+            <label className="text-sm font-semibold text-slate-700">
+              Account number
+              <input value={invoiceBankSettings.accountNumber} onChange={(event) => setInvoiceBankSettings((current) => ({ ...current, accountNumber: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-normal" />
+            </label>
+            <label className="text-sm font-semibold text-slate-700">
+              Branch
+              <input value={invoiceBankSettings.branch} onChange={(event) => setInvoiceBankSettings((current) => ({ ...current, branch: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-normal" />
+            </label>
+            <label className="text-sm font-semibold text-slate-700 md:col-span-2">
+              Payment instruction
+              <textarea value={invoiceBankSettings.paymentNote} onChange={(event) => setInvoiceBankSettings((current) => ({ ...current, paymentNote: event.target.value }))} rows={2} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-normal" />
+            </label>
+          </div>
+          <div className="mt-5 flex items-center justify-between gap-4">
+            <p className="text-xs text-slate-500">Bank details are stored with the other POS settings.</p>
+            <button type="submit" disabled={savingInvoiceBankSettings} className="rounded-xl bg-teal-800 px-5 py-3 text-sm font-bold text-white hover:bg-teal-900 disabled:opacity-50">
+              {savingInvoiceBankSettings ? "Saving..." : "Save invoice bank details"}
+            </button>
+          </div>
+        </form>
 
         <section className="mb-8 rounded-3xl border border-blue-100 bg-blue-50 p-6">
           <h2 className="text-sm font-bold text-blue-950">System controls</h2>

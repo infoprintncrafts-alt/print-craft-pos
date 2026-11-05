@@ -17,6 +17,7 @@ type Sale = {
   id: string;
   invoice_number: string;
   customer_id: string | null;
+  cashier_id: string | null;
   sale_date: string;
   subtotal: number;
   discount: number;
@@ -78,6 +79,7 @@ export default function InvoicePreviewPage() {
           id,
           invoice_number,
           customer_id,
+          cashier_id,
           sale_date,
           subtotal,
           discount,

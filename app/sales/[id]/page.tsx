@@ -17,6 +17,7 @@ type Sale = {
   id: string;
   invoice_number: string;
   customer_id: string | null;
+  cashier_id: string | null;
   sale_date: string;
   subtotal: number;
   discount: number;
@@ -107,6 +108,7 @@ export default function InvoicePreviewPage() {
         id,
         invoice_number,
         customer_id,
+        cashier_id,
         sale_date,
         subtotal,
         discount,
@@ -158,6 +160,11 @@ export default function InvoicePreviewPage() {
           saleData.customer_id === undefined
             ? null
             : String(saleData.customer_id),
+        cashier_id:
+          saleData.cashier_id === null ||
+          saleData.cashier_id === undefined
+            ? null
+            : String(saleData.cashier_id),
         sale_date: String(
           saleData.sale_date
         ),
