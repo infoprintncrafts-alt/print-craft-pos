@@ -152,7 +152,7 @@ export default function InvoiceDocument({
 
   return (
     <>
-      <article className="invoice-document mx-auto w-full max-w-[210mm] bg-white p-6 text-slate-900 shadow-xl sm:p-10 print:max-w-none print:p-0 print:shadow-none">
+      <article className="invoice-document mx-auto box-border w-full max-w-[210mm] bg-white p-6 text-slate-900 shadow-xl sm:p-10 print:max-w-none print:p-0 print:shadow-none">
         <header className="border-b-2 border-slate-900 pb-5">
           <div className="flex flex-wrap items-start justify-between gap-5">
             <div>
@@ -177,7 +177,7 @@ export default function InvoiceDocument({
               <dl className="mt-3 space-y-1 text-xs">
                 <div className="flex justify-between gap-4 sm:justify-end">
                   <dt className="font-semibold">Invoice No:</dt>
-                  <dd>{sale.invoice_number}</dd>
+                  <dd className="min-w-0 break-all text-right">{sale.invoice_number}</dd>
                 </div>
                 <div className="flex justify-between gap-4 sm:justify-end">
                   <dt className="font-semibold">Invoice Date:</dt>
@@ -292,7 +292,7 @@ export default function InvoiceDocument({
           </section>
         )}
 
-        <section className="mt-6 border-t border-slate-300 pt-4 text-xs leading-5">
+        <section className="invoice-footer mt-6 border-t border-slate-300 pt-4 text-xs leading-5">
           <h3 className="text-center font-black uppercase tracking-wider">Thank You for Your Business!</h3>
           <p className="mt-1 text-center text-slate-600">We appreciate your support and look forward to serving you again.</p>
           <h4 className="mt-4 font-bold">Important Notes:</h4>
@@ -310,19 +310,23 @@ export default function InvoiceDocument({
       <style jsx global>{`
         @page {
           size: A4 portrait;
-          margin: 12mm;
+          margin: 0;
         }
 
         @media print {
           html,
           body {
+            width: 210mm !important;
             min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
             background: #fff !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
 
           .invoice-screen-shell {
+            width: 210mm !important;
             min-height: 0 !important;
             margin: 0 !important;
             padding: 0 !important;
@@ -330,12 +334,25 @@ export default function InvoiceDocument({
           }
 
           .invoice-document {
-            width: 100% !important;
+            display: flex !important;
+            width: 210mm !important;
             max-width: none !important;
-            min-height: 0 !important;
+            min-height: 297mm !important;
             margin: 0 !important;
-            padding: 0 !important;
+            padding: 10mm !important;
+            box-sizing: border-box !important;
+            flex-direction: column;
             box-shadow: none !important;
+          }
+
+          .invoice-document > header,
+          .invoice-document > section {
+            flex: 0 0 auto;
+          }
+
+          .invoice-footer {
+            margin-top: auto !important;
+            padding-top: 5mm !important;
           }
 
           .invoice-document thead {
