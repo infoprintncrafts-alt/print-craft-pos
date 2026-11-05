@@ -245,19 +245,44 @@ export default function InvoiceDocument({
           </table>
         </section>
 
-        <section className="invoice-totals ml-auto mt-5 w-full max-w-[390px] text-xs">
-          <MoneyRow label="Subtotal" value={money(subtotal)} />
-          <MoneyRow label="Item Discounts" value={`- ${money(itemDiscount)}`} negative />
-          <MoneyRow label="Invoice Discount" value={`- ${money(invoiceDiscount)}`} negative />
-          {tax > 0 && <MoneyRow label="Tax" value={money(tax)} />}
-          <MoneyRow label="Grand Total" value={money(grandTotal)} emphasized />
-          <MoneyRow label="Amount Paid" value={money(amountPaid)} />
-          <MoneyRow label="Balance Due" value={money(balanceDue)} emphasized negative={balanceDue > 0} />
-        </section>
+        <section className="invoice-summary-grid mt-5 grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(300px,460px)] sm:items-end sm:gap-6">
+          <div className="text-xs">
+            <h3 className="mb-2 text-xs font-black uppercase tracking-wider">Payment Summary</h3>
+            <dl className="space-y-1 border-t border-slate-200 pt-2 leading-5">
+              <div className="flex flex-wrap gap-x-2">
+                <dt className="font-semibold">Payment Method:</dt>
+                <dd>{paymentMethod}</dd>
+              </div>
+              <div className="flex flex-wrap gap-x-2">
+                <dt className="font-semibold">Payment Reference:</dt>
+                <dd className="break-all">{paymentReferences.join(", ") || "N/A"}</dd>
+              </div>
+            </dl>
+          </div>
 
-        <section className="mt-5 text-xs leading-5">
-          <p><span className="font-semibold">Payment Method: </span>{paymentMethod}</p>
-          <p><span className="font-semibold">Payment Reference: </span>{paymentReferences.join(", ") || "N/A"}</p>
+          <div className="invoice-totals w-full text-xs">
+            <div className="invoice-adjustments grid grid-cols-2 gap-x-4">
+              <CompactMoneyRow label="Subtotal" value={money(subtotal)} />
+              <CompactMoneyRow label="Item Discounts" value={`- ${money(itemDiscount)}`} negative />
+              <CompactMoneyRow label="Invoice Discount" value={`- ${money(invoiceDiscount)}`} negative />
+              {tax > 0 && <CompactMoneyRow label="Tax" value={money(tax)} />}
+            </div>
+
+            <div className="invoice-primary-totals mt-2 grid grid-cols-3 divide-x divide-slate-300 border border-slate-300 bg-slate-100 text-[10px]">
+              <div className="min-w-0 px-2 py-2">
+                <p className="font-semibold text-slate-600">Grand Total</p>
+                <p className="mt-1 whitespace-nowrap font-black">{money(grandTotal)}</p>
+              </div>
+              <div className="min-w-0 px-2 py-2">
+                <p className="font-semibold text-slate-600">Amount Paid</p>
+                <p className="mt-1 whitespace-nowrap font-semibold">{money(amountPaid)}</p>
+              </div>
+              <div className="min-w-0 px-2 py-2">
+                <p className="font-semibold text-slate-600">Balance Due</p>
+                <p className={`mt-1 whitespace-nowrap font-black ${balanceDue > 0 ? "text-rose-700" : ""}`}>{money(balanceDue)}</p>
+              </div>
+            </div>
+          </div>
         </section>
 
         {sale.notes?.trim() && (
@@ -321,27 +346,45 @@ export default function InvoiceDocument({
           .invoice-totals {
             break-inside: avoid;
           }
+
+          .invoice-summary-grid {
+            grid-template-columns: minmax(0, 1fr) minmax(300px, 460px);
+            align-items: start;
+            gap: 8mm;
+            margin-top: 5mm;
+          }
+
+          .invoice-summary-grid dl {
+            line-height: 1.4;
+          }
+
+          .invoice-adjustments > div {
+            padding-top: 3px;
+            padding-bottom: 3px;
+          }
+
+          .invoice-primary-totals {
+            break-inside: avoid;
+          }
         }
       `}</style>
     </>
   );
 }
 
-function MoneyRow({
+function CompactMoneyRow({
   label,
   value,
   negative = false,
-  emphasized = false,
 }: {
   label: string;
   value: string;
   negative?: boolean;
-  emphasized?: boolean;
 }) {
   return (
-    <div className={`flex items-center justify-between gap-4 border-b border-slate-200 px-2 py-2 ${emphasized ? "font-bold" : ""} ${emphasized && !negative ? "bg-slate-100" : ""}`}>
+    <div className={`flex items-center justify-between gap-2 border-b border-slate-200 px-2 py-1.5 ${negative ? "text-rose-700" : ""}`}>
       <span>{label}</span>
-      <span className={`text-right tabular-nums ${negative ? "text-rose-700" : ""}`}>{value}</span>
+      <span className="whitespace-nowrap text-right tabular-nums">{value}</span>
     </div>
   );
 }
