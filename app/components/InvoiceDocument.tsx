@@ -247,7 +247,7 @@ export default function InvoiceDocument({
 
         <section className="invoice-summary-grid mt-5 grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(300px,460px)] sm:items-end sm:gap-6">
           <div className="text-xs">
-            <h3 className="mb-2 text-xs font-black uppercase tracking-wider">Payment Summary</h3>
+            <h3 className="mb-2 text-xs font-black uppercase tracking-wider">Payment Details</h3>
             <dl className="space-y-1 border-t border-slate-200 pt-2 leading-5">
               <div className="flex flex-wrap gap-x-2">
                 <dt className="font-semibold">Payment Method:</dt>
@@ -258,9 +258,38 @@ export default function InvoiceDocument({
                 <dd className="break-all">{paymentReferences.join(", ") || "N/A"}</dd>
               </div>
             </dl>
+
+            <div className="invoice-bank-details mt-3">
+              <h4 className="mb-1 font-bold uppercase tracking-wide">Bank Transfer Details:</h4>
+              <table className="w-full border-collapse text-[10px]">
+                <colgroup>
+                  <col className="w-[42%]" />
+                  <col className="w-[5%]" />
+                  <col className="w-[53%]" />
+                </colgroup>
+                <tbody>
+                  <tr>
+                    <th scope="row" className="border border-slate-300 px-2 py-1 text-left font-semibold">Bank Acc. No.</th>
+                    <td className="border border-slate-300 px-1 py-1 text-center">:</td>
+                    <td className="border border-slate-300 px-2 py-1">16 90 20 157 157</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className="border border-slate-300 px-2 py-1 text-left font-semibold">Account Holder</th>
+                    <td className="border border-slate-300 px-1 py-1 text-center">:</td>
+                    <td className="border border-slate-300 px-2 py-1">MJM HASSAN</td>
+                  </tr>
+                  <tr>
+                    <th scope="row" className="border border-slate-300 px-2 py-1 text-left font-semibold">Bank</th>
+                    <td className="border border-slate-300 px-1 py-1 text-center">:</td>
+                    <td className="border border-slate-300 px-2 py-1">HNB</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div className="invoice-totals w-full text-xs">
+            <h3 className="mb-2 text-xs font-black uppercase tracking-wider">Invoice Summary</h3>
             <div className="invoice-adjustments grid grid-cols-2 gap-x-4">
               <CompactMoneyRow label="Subtotal" value={money(subtotal)} />
               <CompactMoneyRow label="Item Discounts" value={`- ${money(itemDiscount)}`} negative />
@@ -295,12 +324,6 @@ export default function InvoiceDocument({
         <section className="invoice-footer mt-6 border-t border-slate-300 pt-4 text-xs leading-5">
           <h3 className="text-center font-black uppercase tracking-wider">Thank You for Your Business!</h3>
           <p className="mt-1 text-center text-slate-600">We appreciate your support and look forward to serving you again.</p>
-          <h4 className="mt-4 font-bold">Important Notes:</h4>
-          <ul className="mt-1 list-disc space-y-0.5 pl-5 text-slate-600">
-            <li>Please check your order and invoice details before leaving.</li>
-            <li>Any issues regarding the supplied products or services should be reported to us promptly.</li>
-            <li>Please keep this invoice for future reference.</li>
-          </ul>
           <p className="mt-3 text-center italic text-slate-600">This is a computer-generated invoice and does not require a signature.</p>
           <p className="mt-3 text-center font-bold">{BUSINESS.name}</p>
           <p className="text-center italic text-slate-600">Your Ideas, Our Creativity!</p>
@@ -381,6 +404,10 @@ export default function InvoiceDocument({
           }
 
           .invoice-primary-totals {
+            break-inside: avoid;
+          }
+
+          .invoice-bank-details {
             break-inside: avoid;
           }
         }
