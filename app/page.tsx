@@ -66,7 +66,7 @@ function amount(value: unknown) {
   return Number.isFinite(numeric) ? numeric : 0;
 }
 
-const emptyMetrics = { todaySales: 0, todayInvoices: 0, monthSales: 0, debt: 0, outstandingPurchases: 0, pendingJobs: 0, dueToday: 0, lowStock: 0, monthProfit: 0, monthItemRevenue: 0, monthCostOfGoods: 0, monthExpenses: 0, monthRefunds: 0, unlinkedItemRevenue: 0, zeroCostProductCount: 0 };
+const emptyMetrics = { todaySales: 0, todayInvoices: 0, monthSales: 0, debt: 0, outstandingPurchases: 0, pendingJobs: 0, dueToday: 0, lowStock: 0, monthProfit: 0, monthCostOfGoods: 0, monthExpenses: 0, monthRefunds: 0, unlinkedItemRevenue: 0, zeroCostProductCount: 0 };
 
 function money(value: number) { return `LKR ${value.toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
 
@@ -98,7 +98,7 @@ function QuickActionIcon({ name }: { name: string }) {
 }
 
 function getKpis(metrics: typeof emptyMetrics) { return [
-  { label: "Today's sales", value: money(metrics.todaySales), detail: `${metrics.todayInvoices} invoice${metrics.todayInvoices === 1 ? "" : "s"} today`, tone: "blue", icon: "sales", href: "/invoices" }, { label: "Invoices today", value: String(metrics.todayInvoices), detail: "Completed invoices", tone: "indigo", icon: "invoice", href: "/invoices" }, { label: "This month's sales", value: money(metrics.monthSales), detail: "Current calendar month", tone: "violet", icon: "sales", href: "/reports" }, { label: "Outstanding debt", value: money(metrics.debt), detail: "Derived from invoice balances", tone: "amber", icon: "debt", href: "/outstanding" }, { label: "Outstanding purchases", value: money(metrics.outstandingPurchases), detail: "Supplier payments still due", tone: "rose", icon: "purchase", href: "/purchases" }, { label: "Pending jobs", value: String(metrics.pendingJobs), detail: "Across all production stages", tone: "orange", icon: "jobs", href: "/production" }, { label: "Due today", value: String(metrics.dueToday), detail: "Jobs with estimated delivery today", tone: "rose", icon: "due", href: "/production" }, { label: "Low stock items", value: String(metrics.lowStock), detail: metrics.lowStock ? "Needs restocking" : "Everything is in stock", tone: "emerald", icon: "stock", href: "/inventory" }, { label: "Profit this month", value: money(metrics.monthProfit), detail: `Estimate: items ${money(metrics.monthItemRevenue)} - costs ${money(metrics.monthCostOfGoods)} - expenses ${money(metrics.monthExpenses)} - refunds ${money(metrics.monthRefunds)}${metrics.unlinkedItemRevenue > 0 ? `; ${money(metrics.unlinkedItemRevenue)} unlinked items excluded` : ""}${metrics.zeroCostProductCount > 0 ? `; ${metrics.zeroCostProductCount} sold product${metrics.zeroCostProductCount === 1 ? " has" : "s have"} zero cost` : ""}`, tone: "teal", icon: "profit", href: "/reports" },
+  { label: "Today's sales", value: money(metrics.todaySales), detail: `${metrics.todayInvoices} invoice${metrics.todayInvoices === 1 ? "" : "s"} today`, tone: "blue", icon: "sales", href: "/invoices" }, { label: "Invoices today", value: String(metrics.todayInvoices), detail: "Completed invoices", tone: "indigo", icon: "invoice", href: "/invoices" }, { label: "This month's sales", value: money(metrics.monthSales), detail: "Current calendar month", tone: "violet", icon: "sales", href: "/reports" }, { label: "Outstanding debt", value: money(metrics.debt), detail: "Derived from invoice balances", tone: "amber", icon: "debt", href: "/outstanding" }, { label: "Outstanding purchases", value: money(metrics.outstandingPurchases), detail: "Supplier payments still due", tone: "rose", icon: "purchase", href: "/purchases" }, { label: "Pending jobs", value: String(metrics.pendingJobs), detail: "Across all production stages", tone: "orange", icon: "jobs", href: "/production" }, { label: "Due today", value: String(metrics.dueToday), detail: "Jobs with estimated delivery today", tone: "rose", icon: "due", href: "/production" }, { label: "Low stock items", value: String(metrics.lowStock), detail: metrics.lowStock ? "Needs restocking" : "Everything is in stock", tone: "emerald", icon: "stock", href: "/inventory" }, { label: "Profit this month", value: money(metrics.monthProfit), detail: `Estimate: sales ${money(metrics.monthSales)} - costs ${money(metrics.monthCostOfGoods)} - expenses ${money(metrics.monthExpenses)} - refunds ${money(metrics.monthRefunds)}${metrics.unlinkedItemRevenue > 0 ? `; ${money(metrics.unlinkedItemRevenue)} unlinked items counted at zero cost` : ""}${metrics.zeroCostProductCount > 0 ? `; ${metrics.zeroCostProductCount} sold product${metrics.zeroCostProductCount === 1 ? " has" : "s have"} zero cost` : ""}`, tone: "teal", icon: "profit", href: "/reports" },
 ] as const; }
 
 const quickActions = [
@@ -449,7 +449,6 @@ export default function Home() {
         items.push(item);
         itemsBySale.set(item.sale_id, items);
       }
-      let monthItemRevenue = 0;
       let monthCostOfGoods = 0;
       let unlinkedItemRevenue = 0;
       const zeroCostProductIds = new Set<string>();
@@ -459,7 +458,6 @@ export default function Home() {
           (sum, item) => sum + Math.max(amount(item.total), 0),
           0
         );
-        if (itemRevenueTotal <= 0) continue;
 
         const itemDiscountTotal = saleLines.reduce(
           (sum, item) => sum + Math.max(amount(item.discount), 0),
@@ -472,7 +470,9 @@ export default function Home() {
 
         for (const item of saleLines) {
           const lineRevenue = Math.max(amount(item.total), 0);
-          const discountShare = invoiceDiscount * (lineRevenue / itemRevenueTotal);
+          const discountShare = itemRevenueTotal > 0
+            ? invoiceDiscount * (lineRevenue / itemRevenueTotal)
+            : 0;
           const netLineRevenue = lineRevenue - discountShare;
           if (!item.product_id || !costsByProduct.has(item.product_id)) {
             unlinkedItemRevenue += netLineRevenue;
@@ -480,7 +480,6 @@ export default function Home() {
           }
 
           const unitCost = costsByProduct.get(item.product_id)!;
-          monthItemRevenue += netLineRevenue;
           monthCostOfGoods += unitCost * Math.max(amount(item.quantity), 0);
           if (unitCost <= 0) zeroCostProductIds.add(item.product_id);
         }
@@ -490,7 +489,7 @@ export default function Home() {
         0
       );
       const monthProfit =
-        monthItemRevenue - monthCostOfGoods - monthExpensesTotal - monthRefundTotal;
+        monthSalesTotal - monthCostOfGoods - monthExpensesTotal - monthRefundTotal;
 
       // Load recent sales with customer names
       const { data: salesWithCustomers } = await supabase
@@ -526,7 +525,6 @@ export default function Home() {
         dueToday: jobs.filter((job) => job.due_date && new Date(job.due_date).toISOString().slice(0, 10) === now.toISOString().slice(0, 10)).length,
         lowStock: (productsResult.data ?? []).filter((product) => Number(product.stock_quantity) <= Number(product.minimum_stock)).length,
         monthProfit,
-        monthItemRevenue,
         monthCostOfGoods,
         monthExpenses: monthExpensesTotal,
         monthRefunds: monthRefundTotal,

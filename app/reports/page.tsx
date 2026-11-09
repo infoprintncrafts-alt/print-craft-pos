@@ -128,14 +128,11 @@ type SupplierPaymentRecord = { purchase_id: string; amount: number };
 type SaleProfitRecord = {
   id: string;
   total: number;
-  discount: number;
 };
 type SaleItemProfitRecord = {
   sale_id: string;
   product_id: string | null;
   quantity: number;
-  discount: number;
-  total: number;
 };
 type ReturnProfitRecord = { refund_amount: number };
 type JobMetricsRecord = { id: string };
@@ -368,7 +365,7 @@ export default function ReportsPage() {
           fetchAllPages<SaleProfitRecord>(async (from, to) => {
             const { data, error } = await supabase
               .from("sales")
-              .select("id, total, discount")
+              .select("id, total")
               .order("id", { ascending: true })
               .range(from, to);
             return { data: data as unknown as SaleProfitRecord[] | null, error };
@@ -448,7 +445,7 @@ export default function ReportsPage() {
           fetchAllPages<SaleItemProfitRecord>(async (from, to) => {
             const { data, error } = await supabase
               .from("sale_items")
-              .select("sale_id, product_id, quantity, discount, total")
+              .select("sale_id, product_id, quantity")
               .order("sale_id", { ascending: true })
               .range(from, to);
             return { data: data as unknown as SaleItemProfitRecord[] | null, error };
@@ -475,37 +472,20 @@ export default function ReportsPage() {
         saleLines.push(item);
         itemsBySale.set(item.sale_id, saleLines);
       }
-      const catalogItemMargin = sales.reduce((profit, sale) => {
+      const costOfGoods = sales.reduce((costTotal, sale) => {
         const saleLines = itemsBySale.get(sale.id) ?? [];
-        const itemRevenueTotal = saleLines.reduce(
-          (sum, item) => sum + Math.max(amount(item.total), 0),
-          0
-        );
-        if (itemRevenueTotal <= 0) return profit;
-
-        const itemDiscountTotal = saleLines.reduce(
-          (sum, item) => sum + Math.max(amount(item.discount), 0),
-          0
-        );
-        const invoiceDiscount = Math.max(
-          amount(sale.discount) - itemDiscountTotal,
-          0
-        );
-
-        return profit + saleLines.reduce((saleProfit, item) => {
-          if (!item.product_id || !productCosts.has(item.product_id)) {
-            return saleProfit;
-          }
-
-          const lineRevenue = Math.max(amount(item.total), 0);
-          const discountShare = invoiceDiscount * (lineRevenue / itemRevenueTotal);
-          const cost =
-            productCosts.get(item.product_id)! * Math.max(amount(item.quantity), 0);
-          return saleProfit + lineRevenue - discountShare - cost;
+        return costTotal + saleLines.reduce((saleCost, item) => {
+          if (!item.product_id || !productCosts.has(item.product_id)) return saleCost;
+          return (
+            saleCost +
+            productCosts.get(item.product_id)! * Math.max(amount(item.quantity), 0)
+          );
         }, 0);
       }, 0);
+      const salesTotal = sales.reduce((sum, sale) => sum + amount(sale.total), 0);
       const profitEarned =
-        catalogItemMargin -
+        salesTotal -
+        costOfGoods -
         expenses.reduce((sum, item) => sum + amount(item.amount), 0) -
         returns.reduce((sum, item) => sum + amount(item.refund_amount), 0);
       const supplierPaymentsByPurchase = new Map<string, number>();
@@ -810,7 +790,7 @@ export default function ReportsPage() {
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <MetricCard label="Total Sales" value={loading ? "Loading…" : money(metrics.salesTotal)} detail="Total value of all recorded sales" />
-            <MetricCard label="Total Profit Earned" value={loading ? "Loading…" : money(metrics.profitEarned)} detail="Estimate: linked item margins at current costs, less expenses and refunds" />
+            <MetricCard label="Total Profit Earned" value={loading ? "Loading…" : money(metrics.profitEarned)} detail="Estimate: total sales less linked product costs at current costs, expenses and refunds; unlinked items assume zero cost" />
             <MetricCard label="Total Invoices" value={loading ? "Loading…" : metrics.salesCount.toLocaleString()} detail="All recorded invoices" />
             <MetricCard label="Payments Received" value={loading ? "Loading…" : money(metrics.paymentsTotal)} detail="Invoice and customer credit payments" />
             <MetricCard label="Outstanding Balance" value={loading ? "Loading…" : money(metrics.outstandingBalance)} detail="Calculated from invoice paid amounts and unapplied credits" />
