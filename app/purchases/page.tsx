@@ -473,10 +473,14 @@ export default function PurchasesPage() {
             </thead>
             <tbody>
               {purchases.map((p) => {
-                const balance = Math.max(
-                  Number(p.total_amount || 0) - Number(p.paid_amount || 0),
-                  0,
-                );
+                const balance =
+                  p.payment_status?.toLowerCase() === "paid"
+                    ? 0
+                    : Math.max(
+                        Number(p.total_amount || 0) -
+                          Number(p.paid_amount || 0),
+                        0,
+                      );
                 return (
                   <tr key={p.id} className="border-t">
                     <td className="px-4 py-4 font-semibold">
