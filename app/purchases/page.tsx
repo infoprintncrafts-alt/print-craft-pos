@@ -459,61 +459,73 @@ export default function PurchasesPage() {
           </form>
         )}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
+          <table className="w-full min-w-[900px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-400">
               <tr>
                 <th className="px-4 py-3">Purchase #</th>
                 <th className="px-4 py-3">Supplier</th>
                 <th className="px-4 py-3">Date</th>
                 <th className="px-4 py-3">Amount</th>
+                <th className="px-4 py-3">Remaining Balance</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Action</th>
               </tr>
             </thead>
             <tbody>
-              {purchases.map((p) => (
-                <tr key={p.id} className="border-t">
-                  <td className="px-4 py-4 font-semibold">
-                    {p.purchase_number}
-                  </td>
-                  <td className="px-4 py-4">
-                    {p.supplier_name || "Custom supplier"}
-                  </td>
-                  <td className="px-4 py-4">
-                    {new Date(p.purchase_date).toLocaleDateString("en-GB")}
-                  </td>
-                  <td className="px-4 py-4">
-                    {money(Number(p.total_amount || 0))}
-                  </td>
-                  <td className="px-4 py-4">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-bold ${p.payment_status === "paid" ? "bg-emerald-100 text-emerald-700" : p.payment_status === "partial" ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"}`}
+              {purchases.map((p) => {
+                const balance = Math.max(
+                  Number(p.total_amount || 0) - Number(p.paid_amount || 0),
+                  0,
+                );
+                return (
+                  <tr key={p.id} className="border-t">
+                    <td className="px-4 py-4 font-semibold">
+                      {p.purchase_number}
+                    </td>
+                    <td className="px-4 py-4">
+                      {p.supplier_name || "Custom supplier"}
+                    </td>
+                    <td className="px-4 py-4">
+                      {new Date(p.purchase_date).toLocaleDateString("en-GB")}
+                    </td>
+                    <td className="px-4 py-4">
+                      {money(Number(p.total_amount || 0))}
+                    </td>
+                    <td
+                      className={`px-4 py-4 font-semibold ${balance > 0 ? "text-rose-700" : "text-emerald-700"}`}
                     >
-                      {p.payment_status || "pending"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4">
-                    {p.payment_status === "paid" ? (
-                      <Link
-                        href={`/purchases/${p.id}`}
-                        className="rounded-lg border border-emerald-200 px-3 py-2 text-xs font-bold text-emerald-700"
+                      {money(balance)}
+                    </td>
+                    <td className="px-4 py-4">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-bold ${p.payment_status === "paid" ? "bg-emerald-100 text-emerald-700" : p.payment_status === "partial" ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"}`}
                       >
-                        View Purchase
-                      </Link>
-                    ) : (
-                      <button
-                        onClick={() => edit(p)}
-                        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white"
-                      >
-                        Pay
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                        {p.payment_status || "pending"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      {p.payment_status === "paid" ? (
+                        <Link
+                          href={`/purchases/${p.id}`}
+                          className="rounded-lg border border-emerald-200 px-3 py-2 text-xs font-bold text-emerald-700"
+                        >
+                          View Purchase
+                        </Link>
+                      ) : (
+                        <button
+                          onClick={() => edit(p)}
+                          className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white"
+                        >
+                          Pay
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
               {!purchases.length && (
                 <tr>
-                  <td colSpan={6} className="p-10 text-center text-slate-400">
+                  <td colSpan={7} className="p-10 text-center text-slate-400">
                     No purchases recorded yet.
                   </td>
                 </tr>
