@@ -69,6 +69,7 @@ const TERMS = [
   "Customized orders are non-refundable once production begins.",
   "Please retain this invoice for future reference.",
 ];
+const PAYMENT_OPTIONS = ["Bank Transfer", "Cash", "Card", "Credit"];
 
 function money(value: number) {
   return `LKR ${value.toLocaleString("en-LK", {
@@ -224,6 +225,20 @@ export default function InvoiceTemplate({
     setRows((current) => current.filter((item) => item.id !== id));
   }
 
+  function isPaymentOptionSelected(option: string) {
+    return method.toLowerCase().replaceAll("_", " ").includes(option.toLowerCase());
+  }
+
+  function updatePaymentOption(option: string, checked: boolean) {
+    const selected = PAYMENT_OPTIONS.filter(isPaymentOptionSelected);
+    const next = checked
+      ? option === "Credit"
+        ? ["Credit"]
+        : [...new Set([...selected.filter((selectedOption) => selectedOption !== "Credit"), option])]
+      : selected.filter((selectedOption) => selectedOption !== option);
+    setMethod(next.length > 0 ? next.join(" + ") : "Credit");
+  }
+
   return (
     <div className={styles.invoiceWrapper} data-invoice-template>
       {showToolbar && (
@@ -268,25 +283,27 @@ export default function InvoiceTemplate({
 
         <div className={styles.invoiceDivider} />
 
-        <section className={styles.detailsSection}>
-          <h3>BANK ACCOUNT DETAILS</h3>
-          <div className={styles.bankGrid}>
-            <p><strong>Bank:</strong> {businessDetails.bankName}</p>
-            <p><strong>Account Holder:</strong> {businessDetails.accountHolder}</p>
-            <p><strong>Account Number:</strong> {businessDetails.accountNumber}</p>
-            <p><strong>Branch:</strong> {businessDetails.branch}</p>
-          </div>
-          {businessDetails.paymentNote && <p className={styles.paymentNote}>{businessDetails.paymentNote}</p>}
-        </section>
+        <div className={styles.partiesGrid}>
+          <section className={styles.detailsSection}>
+            <h3>CUSTOMER DETAILS</h3>
+            <div className={styles.customerGrid}>
+              <p><strong>Name:</strong> {customerDetails.name || "Walk-in Customer"}</p>
+              <p><strong>Address:</strong> {customerDetails.address || "—"}</p>
+              <p><strong>Phone:</strong> {customerDetails.phone || "—"}</p>
+            </div>
+          </section>
 
-        <section className={styles.detailsSection}>
-          <h3>CUSTOMER DETAILS</h3>
-          <div className={styles.customerGrid}>
-            <p><strong>Name:</strong> {customerDetails.name || "Walk-in Customer"}</p>
-            <p><strong>Phone:</strong> {customerDetails.phone || "—"}</p>
-            <p className={styles.customerAddress}><strong>Address:</strong> {customerDetails.address || "—"}</p>
-          </div>
-        </section>
+          <section className={styles.detailsSection}>
+            <h3>BANK ACCOUNT DETAILS</h3>
+            <div className={styles.bankGrid}>
+              <p>{businessDetails.accountHolder}</p>
+              <p>{businessDetails.bankName}</p>
+              <p>{businessDetails.accountNumber}</p>
+              <p>{businessDetails.branch}</p>
+            </div>
+            {businessDetails.paymentNote && <p className={styles.paymentNote}>{businessDetails.paymentNote}</p>}
+          </section>
+        </div>
 
         <section className={styles.itemsSection}>
           <table className={styles.itemsTable}>
@@ -343,16 +360,25 @@ export default function InvoiceTemplate({
         <section className={styles.bottomSection}>
           <div className={styles.paymentMethod}>
             <h3>PAYMENT METHOD</h3>
-            {editable ? (
-              <select value={method} onChange={(event) => setMethod(event.target.value)} aria-label="Payment method">
-                <option>Cash</option>
-                <option>Bank Transfer</option>
-                <option>Card</option>
-                <option>Credit</option>
-                <option>Cash + Bank Transfer</option>
-                <option>Other</option>
-              </select>
-            ) : <p className={styles.paymentMethodValue}>{method || "Credit"}</p>}
+            <div className={styles.paymentOptions}>
+              {PAYMENT_OPTIONS.map((option) => (
+                <label key={option} className={styles.paymentChoice}>
+                  <input
+                    type="checkbox"
+                    checked={isPaymentOptionSelected(option)}
+                    disabled={!editable}
+                    onChange={(event) => updatePaymentOption(option, event.target.checked)}
+                    aria-label={option}
+                  />
+                  <span className={styles.paymentMarker} aria-hidden="true" />
+                  <span>{option}</span>
+                </label>
+              ))}
+            </div>
+            {!PAYMENT_OPTIONS.some(isPaymentOptionSelected) && method !== "Credit" && (
+              <p className={styles.paymentMethodValue}>{method}</p>
+            )}
+            <ul className={styles.terms}>{TERMS.map((term) => <li key={term}>{term}</li>)}</ul>
           </div>
           <div className={styles.summary}>
             <h3>PAYMENT SUMMARY</h3>
@@ -385,11 +411,6 @@ export default function InvoiceTemplate({
         <footer className={styles.invoiceFooter}>
           <p className={styles.thankYou}>THANK YOU FOR YOUR BUSINESS!</p>
           <p>We appreciate your trust and support.</p>
-          <div className={styles.signature}>
-            <span>Customer Signature</span>
-            <span>Authorized Signature</span>
-          </div>
-          <ul className={styles.terms}>{TERMS.map((term) => <li key={term}>{term}</li>)}</ul>
         </footer>
       </article>
     </div>
