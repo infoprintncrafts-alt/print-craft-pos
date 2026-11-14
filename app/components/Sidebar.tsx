@@ -25,6 +25,7 @@ const financeMenu = [
   { name: "Customer Payments", href: "/customer-payments", icon: "💳" },
   { name: "Payment History", href: "/payment-history", icon: "📜" },
   { name: "Invoices", href: "/invoices", icon: "🧾" },
+  { name: "Invoice Template", href: "/invoice-template", icon: "✎" },
   { name: "Outstanding", href: "/outstanding", icon: "⚠" },
   { name: "Expenses", href: "/expenses", icon: "−" },
   { name: "Reports", href: "/reports", icon: "▥" },
