@@ -1,5 +1,4 @@
 import InvoiceTemplate, {
-  DEFAULT_INVOICE_BUSINESS,
   type InvoiceTemplateItem,
 } from "@/app/components/InvoiceTemplate";
 
@@ -12,7 +11,6 @@ export default function InvoicePage() {
   return (
     <InvoiceTemplate
       invoiceNumber="PC-2026-0001"
-      business={DEFAULT_INVOICE_BUSINESS}
       customer={{
         name: "Mohamed Customer",
         address: "Kinniya, Sri Lanka",

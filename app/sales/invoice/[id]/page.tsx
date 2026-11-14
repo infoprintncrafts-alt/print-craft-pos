@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import InvoiceDocument from "@/app/components/InvoiceDocument";
+import InvoiceTemplate, { type InvoiceTemplateItem } from "@/app/components/InvoiceTemplate";
 
 type Customer = {
   id: string;
@@ -39,6 +39,21 @@ type SaleItem = {
   total: number;
 };
 
+function formatDate(value: string) {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime())
+    ? value
+    : parsed.toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
+}
+
+function formatTime(value: string) {
+  if (!value.includes("T")) return "";
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime())
+    ? ""
+    : parsed.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+}
+
 export default function InvoicePreviewPage() {
   const params = useParams();
   const invoiceId = params?.id as string;
@@ -46,6 +61,8 @@ export default function InvoicePreviewPage() {
   const [sale, setSale] = useState<Sale | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [items, setItems] = useState<SaleItem[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState("Credit");
+  const [dueDate, setDueDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -138,6 +155,29 @@ export default function InvoicePreviewPage() {
       }
 
       setItems((itemsData ?? []) as SaleItem[]);
+
+      const [paymentsResult, orderResult] = await Promise.all([
+        supabase
+          .from("customer_payments")
+          .select("payment_method")
+          .eq("sale_id", invoiceId)
+          .order("payment_date", { ascending: true }),
+        supabase
+          .from("orders")
+          .select("due_date")
+          .eq("sale_id", invoiceId)
+          .maybeSingle(),
+      ]);
+
+      const methods = [...new Set(
+        (paymentsResult.data ?? [])
+          .map(({ payment_method }) => payment_method?.trim())
+          .filter((method): method is string => Boolean(method))
+      )];
+      setPaymentMethod(methods.length > 0
+        ? methods.map((method) => method.split(/[_\s]+/).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ")).join(", ")
+        : Number(saleData.paid_amount || 0) > 0 ? "Not recorded" : "Credit");
+      setDueDate(orderResult.data?.due_date ?? null);
     } catch (err) {
       console.error("Invoice loading error:", err);
       setError(
@@ -151,6 +191,24 @@ export default function InvoicePreviewPage() {
   function printInvoice() {
     window.print();
   }
+
+  const itemDiscount = items.reduce((sum, item) => {
+    const gross = Math.max(Number(item.quantity || 0), 0) * Math.max(Number(item.unit_price || 0), 0);
+    return sum + Math.min(Math.max(Number(item.discount || 0), 0), gross);
+  }, 0);
+  const invoiceDiscount = Math.max(Number(sale?.discount || 0) - itemDiscount, 0);
+  const amountPaid = Math.max(Number(sale?.paid_amount || 0), 0);
+  const invoiceTotal = Math.max(Number(sale?.total || 0), 0);
+  const paymentStatus = invoiceTotal > 0 && amountPaid >= invoiceTotal
+    ? "PAID"
+    : amountPaid > 0 ? "PARTIALLY PAID" : "UNPAID";
+  const invoiceItems: InvoiceTemplateItem[] = items.map((item) => ({
+    id: item.id,
+    description: item.item_name,
+    quantity: Math.max(Number(item.quantity || 0), 0),
+    unitPrice: Math.max(Number(item.unit_price || 0), 0),
+    discount: Math.max(Number(item.discount || 0), 0),
+  }));
 
   if (loading) {
     return (
@@ -212,7 +270,22 @@ export default function InvoicePreviewPage() {
       </div>
 
       <main className="invoice-screen-shell min-h-screen bg-slate-100 px-4 py-8 print:bg-white print:p-0">
-        <InvoiceDocument sale={sale} customer={customer} items={items} />
+        <InvoiceTemplate
+          invoiceNumber={sale.invoice_number}
+          customer={customer ?? undefined}
+          items={invoiceItems}
+          initialPaid={amountPaid}
+          paymentMethod={paymentMethod}
+          editable={false}
+          showToolbar={false}
+          date={formatDate(sale.sale_date)}
+          time={formatTime(sale.sale_date)}
+          dueDate={formatDate(dueDate || sale.sale_date)}
+          paymentStatus={paymentStatus}
+          invoiceDiscount={invoiceDiscount}
+          tax={Math.max(Number(sale.tax || 0), 0)}
+          total={invoiceTotal}
+        />
       </main>
     </>
   );

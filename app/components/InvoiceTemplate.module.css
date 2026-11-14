@@ -16,6 +16,7 @@
 .invoiceHeading { min-width: 125px; text-align: right; }
 .invoiceHeading h2 { margin: 0 0 10px; font-size: 26px; font-weight: 900; letter-spacing: 1px; }
 .invoiceHeading p { margin: 5px 0; font-size: 10px; }
+.paymentStatus { margin-top: 8px !important; border-top: 1px solid #ccc; padding-top: 6px; }
 .invoiceDivider { margin: 15px 0; border-top: 2px solid #000; }
 .detailsSection { margin-bottom: 15px; }
 .detailsSection h3, .paymentMethod h3, .summary h3 { margin: 0 0 9px; border-bottom: 1px solid #000; padding-bottom: 5px; font-size: 11px; font-weight: 800; letter-spacing: .3px; }
@@ -28,18 +29,21 @@
 .itemsTable { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 10px; }
 .itemsTable th { border: 1px solid #000; padding: 9px 5px; background: #000; color: #fff; font-weight: bold; text-align: center; }
 .itemsTable td { height: 34px; border: 1px solid #000; padding: 5px; vertical-align: middle; }
-.numberCol { width: 7%; }
-.priceCol { width: 16%; }
-.discountCol { width: 17%; }
+.numberCol { width: 6%; }
+.quantityCol { width: 7%; }
+.priceCol { width: 15%; }
+.discountCol { width: 16%; }
 .amountCol { width: 17%; }
 .actionCol { width: 35px; }
 .center { text-align: center; }
 .descriptionInput, .numberInput { width: 100%; border: none; outline: none; padding: 3px; background: transparent; color: #000; font-family: inherit; font-size: 10px; }
 .numberInput { text-align: right; }
+.moneyCell { display: block; text-align: right; white-space: nowrap; }
 .amountCell { font-weight: bold; text-align: right; white-space: nowrap; }
 .removeRow { width: 22px; height: 22px; border: none; border-radius: 3px; background: #000; color: #fff; cursor: pointer; font-size: 17px; line-height: 1; }
 .bottomSection { display: grid; grid-template-columns: 1fr .85fr; align-items: start; gap: 30px; margin-top: 25px; }
 .paymentMethod select { width: 100%; border: 1px solid #000; border-radius: 0; padding: 9px; background: #fff; color: #000; font-size: 11px; }
+.paymentMethodValue { margin: 0; border: 1px solid #000; padding: 9px; font-size: 11px; }
 .summary { width: 100%; }
 .summaryRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid #ccc; padding: 7px 4px; font-size: 10px; }
 .summaryRow strong { text-align: right; white-space: nowrap; }

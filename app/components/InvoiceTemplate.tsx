@@ -2,13 +2,15 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabase";
 import styles from "./InvoiceTemplate.module.css";
 
 export type InvoiceTemplateItem = {
-  id: number;
+  id: number | string;
   description: string;
   unitPrice: number;
   discount: number;
+  quantity?: number;
 };
 
 export type InvoiceTemplateBusiness = {
@@ -26,7 +28,7 @@ export type InvoiceTemplateBusiness = {
   paymentNote: string;
 };
 
-type Customer = { name: string; address: string; phone: string };
+type Customer = { name: string | null; address: string | null; phone: string | null };
 
 type InvoiceProps = {
   business?: Partial<InvoiceTemplateBusiness>;
@@ -35,6 +37,15 @@ type InvoiceProps = {
   items?: InvoiceTemplateItem[];
   initialPaid?: number;
   paymentMethod?: string;
+  editable?: boolean;
+  showToolbar?: boolean;
+  date?: string;
+  time?: string;
+  dueDate?: string;
+  paymentStatus?: string;
+  invoiceDiscount?: number;
+  tax?: number;
+  total?: number;
 };
 
 export const DEFAULT_INVOICE_BUSINESS: InvoiceTemplateBusiness = {
@@ -77,8 +88,18 @@ export default function InvoiceTemplate({
   items: initialItems,
   initialPaid = 0,
   paymentMethod: initialMethod = "Cash",
+  editable = true,
+  showToolbar = true,
+  date,
+  time,
+  dueDate,
+  paymentStatus,
+  invoiceDiscount = 0,
+  tax = 0,
+  total,
 }: InvoiceProps) {
-  const businessDetails = { ...DEFAULT_INVOICE_BUSINESS, ...business };
+  const [bankOverrides, setBankOverrides] = useState<Partial<InvoiceTemplateBusiness>>({});
+  const businessDetails = { ...DEFAULT_INVOICE_BUSINESS, ...bankOverrides, ...business };
   const customerDetails = {
     name: customer?.name ?? "",
     address: customer?.address ?? "",
@@ -106,28 +127,60 @@ export default function InvoiceTemplate({
         minute: "2-digit",
       }),
     });
+
+    let active = true;
+    async function loadBankDetails() {
+      const { data, error } = await supabase
+        .from("settings")
+        .select("key,value")
+        .in("key", [
+          "invoice_bank_name",
+          "invoice_bank_account_name",
+          "invoice_bank_account_number",
+          "invoice_bank_branch",
+          "invoice_bank_payment_note",
+        ]);
+
+      if (!active || error) return;
+      const values = new Map((data ?? []).map(({ key, value }) => [key, value?.trim()]));
+      setBankOverrides({
+        ...(values.get("invoice_bank_name") ? { bankName: values.get("invoice_bank_name") } : {}),
+        ...(values.get("invoice_bank_account_name") ? { accountHolder: values.get("invoice_bank_account_name") } : {}),
+        ...(values.get("invoice_bank_account_number") ? { accountNumber: values.get("invoice_bank_account_number") } : {}),
+        ...(values.get("invoice_bank_branch") ? { branch: values.get("invoice_bank_branch") } : {}),
+        ...(values.get("invoice_bank_payment_note") ? { paymentNote: values.get("invoice_bank_payment_note") } : {}),
+      });
+    }
+
+    void loadBankDetails();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const subtotal = useMemo(
-    () => rows.reduce((sum, item) => sum + nonNegative(item.unitPrice), 0),
+    () => rows.reduce((sum, item) => sum + nonNegative(item.unitPrice) * nonNegative(item.quantity ?? 1), 0),
     [rows]
   );
   const totalDiscount = useMemo(
     () =>
       rows.reduce(
         (sum, item) =>
-          sum + Math.min(nonNegative(item.discount), nonNegative(item.unitPrice)),
+          sum + Math.min(nonNegative(item.discount), nonNegative(item.unitPrice) * nonNegative(item.quantity ?? 1)),
         0
       ),
     [rows]
   );
-  const grandTotal = Math.max(subtotal - totalDiscount, 0);
+  const safeInvoiceDiscount = nonNegative(invoiceDiscount);
+  const safeTax = nonNegative(tax);
+  const computedTotal = Math.max(subtotal - totalDiscount - safeInvoiceDiscount + safeTax, 0);
+  const grandTotal = total === undefined ? computedTotal : nonNegative(total);
   const balance = Math.max(grandTotal - paid, 0);
   const change = Math.max(paid - grandTotal, 0);
 
   function updateItem(
-    id: number,
-    field: keyof InvoiceTemplateItem,
+    id: number | string,
+    field: "description" | "quantity" | "unitPrice" | "discount",
     value: string | number
   ) {
     setRows((current) =>
@@ -138,15 +191,24 @@ export default function InvoiceTemplate({
         }
 
         const amount = nonNegative(Number(value));
+        if (field === "quantity") {
+          const quantity = amount;
+          const lineGross = nonNegative(item.unitPrice) * quantity;
+          return { ...item, quantity, discount: Math.min(item.discount, lineGross) };
+        }
+
         if (field === "unitPrice") {
           return {
             ...item,
             unitPrice: amount,
-            discount: Math.min(item.discount, amount),
+            discount: Math.min(item.discount, amount * nonNegative(item.quantity ?? 1)),
           };
         }
 
-        return { ...item, discount: Math.min(amount, nonNegative(item.unitPrice)) };
+        return {
+          ...item,
+          discount: Math.min(amount, nonNegative(item.unitPrice) * nonNegative(item.quantity ?? 1)),
+        };
       })
     );
   }
@@ -154,21 +216,23 @@ export default function InvoiceTemplate({
   function addRow() {
     setRows((current) => [
       ...current,
-      { id: Date.now() + Math.random(), description: "", unitPrice: 0, discount: 0 },
+      { id: Date.now() + Math.random(), description: "", quantity: 1, unitPrice: 0, discount: 0 },
     ]);
   }
 
-  function removeRow(id: number) {
+  function removeRow(id: number | string) {
     setRows((current) => current.filter((item) => item.id !== id));
   }
 
   return (
     <div className={styles.invoiceWrapper} data-invoice-template>
-      <div className={styles.invoiceToolbar}>
-        <span className={styles.previewLabel}>Editable invoice preview</span>
-        <button type="button" onClick={addRow}>+ Add Item</button>
-        <button type="button" onClick={() => window.print()}>Print Invoice</button>
-      </div>
+      {showToolbar && (
+        <div className={styles.invoiceToolbar}>
+          <span className={styles.previewLabel}>{editable ? "Editable invoice preview" : "Invoice"}</span>
+          {editable && <button type="button" onClick={addRow}>+ Add Item</button>}
+          <button type="button" onClick={() => window.print()}>Print Invoice</button>
+        </div>
+      )}
 
       <article className={styles.invoicePage}>
         <header className={styles.invoiceHeader}>
@@ -195,8 +259,10 @@ export default function InvoiceTemplate({
           <div className={styles.invoiceHeading}>
             <h2>INVOICE</h2>
             <p><strong>Invoice No:</strong> {invoiceNumber}</p>
-            <p><strong>Date:</strong> {dateTime.date || "—"}</p>
-            <p><strong>Time:</strong> {dateTime.time || "—"}</p>
+            <p><strong>Date:</strong> {date || dateTime.date || "—"}</p>
+            {dueDate && <p><strong>Due Date:</strong> {dueDate}</p>}
+            <p><strong>Time:</strong> {time || (date ? "—" : dateTime.time || "—")}</p>
+            {paymentStatus && <p className={styles.paymentStatus}><strong>Status:</strong> {paymentStatus}</p>}
           </div>
         </header>
 
@@ -228,57 +294,45 @@ export default function InvoiceTemplate({
               <tr>
                 <th className={styles.numberCol}>No.</th>
                 <th>Description of Item / Service</th>
+                <th className={styles.quantityCol}>Qty</th>
                 <th className={styles.priceCol}>Unit Price</th>
                 <th className={styles.discountCol}>Item Discount</th>
                 <th className={styles.amountCol}>Amount</th>
-                <th className={`${styles.actionCol} ${styles.noPrint}`}>Action</th>
+                {editable && <th className={`${styles.actionCol} ${styles.noPrint}`}>Action</th>}
               </tr>
             </thead>
             <tbody>
               {rows.map((item, index) => {
-                const amount = nonNegative(item.unitPrice) - Math.min(nonNegative(item.discount), nonNegative(item.unitPrice));
+                const quantity = nonNegative(item.quantity ?? 1);
+                const gross = nonNegative(item.unitPrice) * quantity;
+                const amount = gross - Math.min(nonNegative(item.discount), gross);
                 return (
                   <tr key={item.id}>
                     <td className={styles.center}>{index + 1}</td>
                     <td>
-                      <input
-                        className={styles.descriptionInput}
-                        value={item.description}
-                        onChange={(event) => updateItem(item.id, "description", event.target.value)}
-                        placeholder="Item / Service"
-                        aria-label={`Item ${index + 1} description`}
-                      />
+                      {editable ? (
+                        <input
+                          className={styles.descriptionInput}
+                          value={item.description}
+                          onChange={(event) => updateItem(item.id, "description", event.target.value)}
+                          placeholder="Item / Service"
+                          aria-label={`Item ${index + 1} description`}
+                        />
+                      ) : item.description}
+                    </td>
+                    <td className={styles.center}>{quantity}</td>
+                    <td>
+                      {editable ? (
+                        <input type="number" min="0" className={styles.numberInput} value={item.unitPrice || ""} onChange={(event) => updateItem(item.id, "unitPrice", event.target.value)} aria-label={`Item ${index + 1} unit price`} />
+                      ) : <span className={styles.moneyCell}>{money(item.unitPrice)}</span>}
                     </td>
                     <td>
-                      <input
-                        type="number"
-                        min="0"
-                        className={styles.numberInput}
-                        value={item.unitPrice || ""}
-                        onChange={(event) => updateItem(item.id, "unitPrice", event.target.value)}
-                        aria-label={`Item ${index + 1} unit price`}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        min="0"
-                        className={styles.numberInput}
-                        value={item.discount || ""}
-                        onChange={(event) => updateItem(item.id, "discount", event.target.value)}
-                        aria-label={`Item ${index + 1} discount`}
-                      />
+                      {editable ? (
+                        <input type="number" min="0" className={styles.numberInput} value={item.discount || ""} onChange={(event) => updateItem(item.id, "discount", event.target.value)} aria-label={`Item ${index + 1} discount`} />
+                      ) : <span className={styles.moneyCell}>{money(item.discount)}</span>}
                     </td>
                     <td className={styles.amountCell}>{money(amount)}</td>
-                    <td className={`${styles.noPrint} ${styles.center}`}>
-                      <button
-                        type="button"
-                        className={styles.removeRow}
-                        onClick={() => removeRow(item.id)}
-                        aria-label={`Remove item ${index + 1}`}
-                        title="Remove item"
-                      >×</button>
-                    </td>
+                    {editable && <td className={`${styles.noPrint} ${styles.center}`}><button type="button" className={styles.removeRow} onClick={() => removeRow(item.id)} aria-label={`Remove item ${index + 1}`} title="Remove item">×</button></td>}
                   </tr>
                 );
               })}
@@ -289,31 +343,37 @@ export default function InvoiceTemplate({
         <section className={styles.bottomSection}>
           <div className={styles.paymentMethod}>
             <h3>PAYMENT METHOD</h3>
-            <select value={method} onChange={(event) => setMethod(event.target.value)} aria-label="Payment method">
-              <option>Cash</option>
-              <option>Bank Transfer</option>
-              <option>Card</option>
-              <option>Credit</option>
-              <option>Cash + Bank Transfer</option>
-              <option>Other</option>
-            </select>
+            {editable ? (
+              <select value={method} onChange={(event) => setMethod(event.target.value)} aria-label="Payment method">
+                <option>Cash</option>
+                <option>Bank Transfer</option>
+                <option>Card</option>
+                <option>Credit</option>
+                <option>Cash + Bank Transfer</option>
+                <option>Other</option>
+              </select>
+            ) : <p className={styles.paymentMethodValue}>{method || "Credit"}</p>}
           </div>
           <div className={styles.summary}>
             <h3>PAYMENT SUMMARY</h3>
             <div className={styles.summaryRow}><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
             <div className={styles.summaryRow}><span>Total Item Discount</span><strong>{money(totalDiscount)}</strong></div>
+            {safeInvoiceDiscount > 0 && <div className={styles.summaryRow}><span>Invoice Discount</span><strong>{money(safeInvoiceDiscount)}</strong></div>}
+            {safeTax > 0 && <div className={styles.summaryRow}><span>Tax</span><strong>{money(safeTax)}</strong></div>}
             <div className={`${styles.summaryRow} ${styles.grandTotal}`}><span>GRAND TOTAL</span><strong>{money(grandTotal)}</strong></div>
             <div className={styles.summaryRow}>
               <label htmlFor="invoice-amount-paid">Amount Paid</label>
-              <div className={styles.paidInput}>
-                <input
-                  id="invoice-amount-paid"
-                  type="number"
-                  min="0"
-                  value={paid || ""}
-                  onChange={(event) => setPaid(nonNegative(Number(event.target.value)))}
-                />
-              </div>
+              {editable ? (
+                <div className={styles.paidInput}>
+                  <input
+                    id="invoice-amount-paid"
+                    type="number"
+                    min="0"
+                    value={paid || ""}
+                    onChange={(event) => setPaid(nonNegative(Number(event.target.value)))}
+                  />
+                </div>
+              ) : <strong>{money(paid)}</strong>}
             </div>
             <div className={`${styles.summaryRow} ${styles.balanceRow}`}>
               <span>{change > 0 ? "Change" : "BALANCE DUE"}</span>
