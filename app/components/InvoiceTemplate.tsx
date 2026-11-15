@@ -101,11 +101,11 @@ export default function InvoiceTemplate({
 }: InvoiceProps) {
   const [bankOverrides, setBankOverrides] = useState<Partial<InvoiceTemplateBusiness>>({});
   const businessDetails = { ...DEFAULT_INVOICE_BUSINESS, ...bankOverrides, ...business };
-  const customerDetails = {
+  const [customerDetails, setCustomerDetails] = useState({
     name: customer?.name ?? "",
     address: customer?.address ?? "",
     phone: customer?.phone ?? "",
-  };
+  });
   const [rows, setRows] = useState<InvoiceTemplateItem[]>(
     initialItems ?? [
       { id: 1, description: "", unitPrice: 0, discount: 0 },
@@ -225,6 +225,10 @@ export default function InvoiceTemplate({
     setRows((current) => current.filter((item) => item.id !== id));
   }
 
+  function updateCustomer(field: keyof Customer, value: string) {
+    setCustomerDetails((current) => ({ ...current, [field]: value }));
+  }
+
   function isPaymentOptionSelected(option: string) {
     return method.toLowerCase().replaceAll("_", " ").includes(option.toLowerCase());
   }
@@ -287,9 +291,24 @@ export default function InvoiceTemplate({
           <section className={styles.detailsSection}>
             <h3>CUSTOMER DETAILS</h3>
             <div className={styles.customerGrid}>
-              <p><strong>Name:</strong> {customerDetails.name || "Walk-in Customer"}</p>
-              <p><strong>Address:</strong> {customerDetails.address || "—"}</p>
-              <p><strong>Phone:</strong> {customerDetails.phone || "—"}</p>
+              <p className={styles.customerField}>
+                <strong>Name:</strong>
+                {editable ? (
+                  <input className={styles.customerInput} value={customerDetails.name} onChange={(event) => updateCustomer("name", event.target.value)} placeholder="Customer name" aria-label="Customer name" />
+                ) : <span>{customerDetails.name || "Walk-in Customer"}</span>}
+              </p>
+              <p className={styles.customerField}>
+                <strong>Address:</strong>
+                {editable ? (
+                  <input className={styles.customerInput} value={customerDetails.address} onChange={(event) => updateCustomer("address", event.target.value)} placeholder="Customer address" aria-label="Customer address" />
+                ) : <span>{customerDetails.address || "—"}</span>}
+              </p>
+              <p className={styles.customerField}>
+                <strong>Phone:</strong>
+                {editable ? (
+                  <input className={styles.customerInput} type="tel" value={customerDetails.phone} onChange={(event) => updateCustomer("phone", event.target.value)} placeholder="Customer phone" aria-label="Customer phone" />
+                ) : <span>{customerDetails.phone || "—"}</span>}
+              </p>
             </div>
           </section>
 

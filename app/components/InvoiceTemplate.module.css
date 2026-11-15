@@ -25,6 +25,9 @@
 .bankGrid p, .customerGrid p { margin: 3px 0; font-size: 10px; line-height: 1.5; }
 .paymentNote { margin: 6px 0 12px; font-size: 9px; line-height: 1.4; }
 .customerGrid { display: block; }
+.customerField { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: baseline; gap: 4px; }
+.customerInput { width: 100%; min-width: 0; border: 1px solid transparent; border-radius: 2px; outline: none; padding: 2px 3px; background: transparent; color: #000; font-family: inherit; font-size: 10px; }
+.customerInput:focus { border-color: var(--invoice-brand); background: var(--invoice-brand-pale); }
 .customerAddress { grid-column: auto; }
 .itemsSection { margin-top: 18px; }
 .itemsTable { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 10px; }
