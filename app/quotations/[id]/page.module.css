@@ -1,0 +1,9 @@
+.screenControls { display: block; }
+
+@page { size: A4 portrait; margin: 0; }
+@media print {
+  :global(html), :global(body) { width: 210mm; min-height: 0; margin: 0 !important; padding: 0 !important; background: #fff !important; }
+  :global(body:has([data-quotation-document]) aside) { display: none !important; }
+  :global(body:has([data-quotation-document]) main) { width: 210mm !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }
+  .screenControls { display: none !important; }
+}
