@@ -97,7 +97,7 @@ export default function QuotationDocument({
               <th>Description of item / service</th>
               <th className={styles.quantityColumn}>Qty</th>
               <th className={styles.moneyColumn}>Unit price</th>
-              <th className={styles.moneyColumn}>Discount</th>
+              <th className={styles.moneyColumn}>Unit discount</th>
               <th className={styles.moneyColumn}>Amount</th>
             </tr>
           </thead>
@@ -108,7 +108,7 @@ export default function QuotationDocument({
                 <td>{item.item_name}</td>
                 <td className={styles.center}>{item.quantity}</td>
                 <td className={styles.money}>{money(item.unit_price)}</td>
-                <td className={styles.money}>{money(item.discount)}</td>
+                <td className={styles.money}>{money(item.discount / Math.max(Number(item.quantity), 1))}</td>
                 <td className={styles.money}><strong>{money(item.total)}</strong></td>
               </tr>
             ))}

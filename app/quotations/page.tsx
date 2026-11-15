@@ -121,7 +121,7 @@ export default function QuotationsPage() {
           item_name: item.item_name,
           quantity: String(item.quantity),
           unit_price: String(item.unit_price),
-          discount: String(item.discount),
+          discount: String(Number(item.discount) / Math.max(Number(item.quantity), 1)),
         })) as QuotationLine[]);
       }
     } catch (loadError) {
@@ -158,8 +158,9 @@ export default function QuotationsPage() {
       0
     );
     const itemDiscount = items.reduce((sum, item) => {
-      const lineGross = Math.max(1, Math.floor(safeNumber(item.quantity))) * safeNumber(item.unit_price);
-      return sum + Math.min(safeNumber(item.discount), lineGross);
+      const quantity = Math.max(1, Math.floor(safeNumber(item.quantity)));
+      const unitPrice = safeNumber(item.unit_price);
+      return sum + Math.min(safeNumber(item.discount), unitPrice) * quantity;
     }, 0);
     const subtotal = Math.max(grossSubtotal - itemDiscount, 0);
     const safeInvoiceDiscount = Math.min(safeNumber(invoiceDiscount), subtotal);
@@ -201,7 +202,7 @@ export default function QuotationsPage() {
         item_name: item.item_name.trim(),
         quantity,
         unit_price: unitPrice,
-        discount: Math.min(safeNumber(item.discount), quantity * unitPrice),
+        discount: Math.min(safeNumber(item.discount), unitPrice) * quantity,
       };
     });
     const { data, error: saveError } = await supabase.rpc("save_quotation", {
@@ -286,7 +287,7 @@ export default function QuotationsPage() {
           <div className="overflow-x-auto">
             <div className="min-w-[860px] space-y-2">
               <div className="grid grid-cols-[1.2fr_1.5fr_.6fr_.8fr_.8fr_auto] gap-2 px-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                <span>Product</span><span>Description</span><span>Qty</span><span>Unit price</span><span>Line discount</span><span />
+                <span>Product</span><span>Description</span><span>Qty</span><span>Unit price</span><span>Unit discount</span><span />
               </div>
               {items.map((item, index) => (
                 <div key={item.id} className="grid grid-cols-[1.2fr_1.5fr_.6fr_.8fr_.8fr_auto] gap-2">
@@ -308,7 +309,7 @@ export default function QuotationsPage() {
                   <input value={item.item_name} onChange={(event) => updateItem(index, { item_name: event.target.value })} placeholder="Item or service description" className="min-w-0 rounded-lg border border-slate-300 px-3 py-2.5 text-sm" />
                   <input type="number" min="1" step="1" value={item.quantity} onChange={(event) => updateItem(index, { quantity: event.target.value })} className="min-w-0 rounded-lg border border-slate-300 px-2 py-2.5 text-sm" />
                   <input type="number" min="0" step="0.01" value={item.unit_price} onChange={(event) => updateItem(index, { unit_price: event.target.value })} placeholder="0.00" className="min-w-0 rounded-lg border border-slate-300 px-2 py-2.5 text-sm" />
-                  <input type="number" min="0" step="0.01" value={item.discount} onChange={(event) => updateItem(index, { discount: event.target.value })} placeholder="0.00" className="min-w-0 rounded-lg border border-slate-300 px-2 py-2.5 text-sm" />
+                  <input type="number" min="0" max={safeNumber(item.unit_price)} step="0.01" value={item.discount} onChange={(event) => updateItem(index, { discount: event.target.value })} placeholder="0.00" className="min-w-0 rounded-lg border border-slate-300 px-2 py-2.5 text-sm" />
                   <button type="button" disabled={items.length === 1} onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="rounded-lg px-2 text-xs font-bold text-rose-600 hover:bg-rose-50 disabled:text-slate-300">Remove</button>
                 </div>
               ))}
