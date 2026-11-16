@@ -534,6 +534,14 @@
   overflow-wrap: anywhere;
 }
 
+.addressPanel:nth-child(2) .addressLines {
+  font-size: 1.72cqw;
+}
+
+.addressPanel:nth-child(2) .addressLines strong {
+  font-size: 2.25cqw;
+}
+
 .addressLines span {
   overflow-wrap: anywhere;
   white-space: pre-line;
