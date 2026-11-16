@@ -748,15 +748,15 @@
 }
 
 @page {
-  size: A4 landscape;
+  size: A4 portrait;
   margin: 0;
 }
 
 @media print {
   :global(html),
   :global(body) {
-    width: 29.7cm !important;
-    height: auto !important;
+    width: 21cm !important;
+    height: 29.7cm !important;
     min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -768,8 +768,8 @@
   }
 
   :global(body:has([data-shipping-label]) > main) {
-    width: 29.7cm !important;
-    height: auto !important;
+    width: 21cm !important;
+    height: 29.7cm !important;
     min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -777,8 +777,8 @@
   }
 
   .page {
-    width: 29.7cm;
-    height: auto;
+    width: 21cm;
+    height: 29.7cm;
     min-height: 0;
     margin: 0;
     padding: 0;
@@ -795,53 +795,54 @@
 
   .a4PrintPages {
     display: block;
-    width: 29.7cm;
+    width: 21cm;
+    height: 29.7cm;
     margin: 0;
     padding: 0;
   }
 
   .a4Sheet {
-    position: relative;
-    width: 29.7cm;
-    height: 21cm;
-    overflow: hidden;
+    display: flex;
+    width: 21cm;
+    height: 29.7cm;
+    justify-content: center;
+    padding-top: 1cm;
     break-inside: avoid;
     page-break-inside: avoid;
-    break-after: page;
-    page-break-after: always;
-  }
-
-  .a4Sheet:last-child {
-    break-after: auto;
-    page-break-after: auto;
   }
 
   .tileCanvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100cm;
-    height: 70cm;
-    transform-origin: top left;
+    width: 10cm;
+    height: 7cm;
   }
 
   .label {
     display: flex;
-    width: 100cm;
-    height: 70cm;
+    width: 10cm;
+    height: 7cm;
     min-width: 0;
-    min-height: 70cm;
+    min-height: 7cm;
     margin: 0;
     aspect-ratio: auto;
-    border: 0.12cm solid #111;
+    border: 0.035cm solid #111;
     border-radius: 0;
     padding: 0;
     box-shadow: none;
-    page-break-after: avoid;
   }
 
-  .labelHeader {
-    border-bottom-width: 0.1cm;
+  .labelHeader,
+  .serviceBar,
+  .fromToGrid,
+  .additionalInfo {
+    border-bottom-width: 0.02cm;
+  }
+
+  .logoFrame,
+  .topWarning,
+  .addressPanel + .addressPanel,
+  .trackingNumber {
+    border-left-width: 0.02cm;
+    border-right-width: 0.02cm;
   }
 
   .logoFrame,
@@ -850,86 +851,5 @@
   .trackingNumber {
     border-left-color: #111;
     border-right-color: #111;
-  }
-
-  .logoFrame,
-  .topWarning,
-  .addressPanel + .addressPanel,
-  .trackingNumber {
-    border-left-width: 0.1cm;
-    border-right-width: 0.1cm;
-  }
-
-  .serviceBar,
-  .fromToGrid,
-  .additionalInfo {
-    border-bottom-width: 0.1cm;
-  }
-
-  .returnCopy {
-    font-size: 1.25cm;
-  }
-
-  .returnCopy > strong {
-    font-size: 1.2cm;
-  }
-
-  .returnCopy b {
-    font-size: 1.48cm;
-  }
-
-  .topWarning > span {
-    font-size: 3.8cm;
-  }
-
-  .topWarning strong {
-    font-size: 1.18cm;
-  }
-
-  .serviceBar strong {
-    font-size: 3.15cm;
-  }
-
-  .serviceBar span {
-    font-size: 1.55cm;
-  }
-
-  .addressPanel h2 {
-    font-size: 2.3cm;
-  }
-
-  .addressLines {
-    font-size: 1.55cm;
-  }
-
-  .addressLines strong {
-    font-size: 1.95cm;
-  }
-
-  .additionalInfo h2 {
-    font-size: 1.8cm;
-  }
-
-  .infoGrid {
-    font-size: 1.38cm;
-  }
-
-  .handlingTag svg {
-    width: 1.5cm;
-    height: 1.5cm;
-    flex-basis: 1.5cm;
-  }
-
-  .trackingNumber span {
-    font-size: 1.55cm;
-  }
-
-  .trackingNumber strong {
-    font-size: 2.35cm;
-  }
-
-  .barcodeWrap > span,
-  .barcodePlaceholder {
-    font-size: 1.15cm;
   }
 }

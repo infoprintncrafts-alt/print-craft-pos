@@ -40,11 +40,7 @@ const warningOptions: { key: WarningKey; label: string }[] = [
   { key: "noStack", label: "Do not stack" },
 ];
 
-const A4_TILES = Array.from({ length: 16 }, (_, index) => ({
-  page: index + 1,
-  column: index % 4,
-  row: Math.floor(index / 4),
-}));
+const A4_PRINT_PAGES = [1];
 
 const code39Patterns: Record<string, string> = {
   "0": "nnnwwnwnn", "1": "wnnwnnnnw", "2": "nnwwnnnnw", "3": "wnwwnnnnn",
@@ -312,10 +308,10 @@ export default function ShippingLabelsPage() {
         <div className={styles.pageHeading}>
           <span className={styles.eyebrow}>CUSTOMER TOOLS</span>
           <h1>Shipping label</h1>
-          <p>Print the 100 × 70 cm label across 16 A4 landscape sheets arranged in a 4 × 4 grid.</p>
+          <p>Print the complete label on one A4 portrait sheet, keeping the 100:70 proportions.</p>
         </div>
         <button type="button" className={styles.printButton} onClick={() => window.print()}>
-          <span aria-hidden="true">↗</span> Print A4 tiles
+          <span aria-hidden="true">↗</span> Print on A4
         </button>
       </div>
 
@@ -441,7 +437,7 @@ export default function ShippingLabelsPage() {
               </label>
             ))}
           </div>
-          <p className={styles.editorNote}>Print all 16 A4 landscape sheets at 100% scale. Arrange them in a 4 × 4 grid, then trim and join to make the 100 × 70 cm label.</p>
+          <p className={styles.editorNote}>The 100:70 label is scaled proportionally to fit one A4 portrait sheet.</p>
         </section>
 
         <section className={styles.previewSection} aria-label="Shipping label preview">
@@ -450,19 +446,16 @@ export default function ShippingLabelsPage() {
               <span className={styles.eyebrow}>LIVE PREVIEW</span>
               <h2>Print ready</h2>
             </div>
-            <span className={styles.sizeBadge}>100 × 70 cm <i>·</i> 4 × 4 A4 sheets</span>
+            <span className={styles.sizeBadge}>100:70 proportions <i>·</i> one A4 sheet</span>
           </div>
           {renderLabelArtwork()}
         </section>
       </div>
 
       <div className={styles.a4PrintPages} aria-hidden="true">
-        {A4_TILES.map((tile) => (
-          <section className={styles.a4Sheet} key={tile.page}>
-            <div
-              className={styles.tileCanvas}
-              style={{ transform: `translate(${-tile.column * 29.7}cm, ${-tile.row * 21}cm)` }}
-            >
+        {A4_PRINT_PAGES.map((page) => (
+          <section className={styles.a4Sheet} key={page}>
+            <div className={styles.tileCanvas}>
               {renderLabelArtwork()}
             </div>
           </section>
