@@ -354,7 +354,7 @@
   position: relative;
   display: flex;
   width: min(100%, 1250px);
-  aspect-ratio: 10 / 7;
+  aspect-ratio: 12 / 7;
   flex-direction: column;
   overflow: hidden;
   margin: 0 auto;
@@ -414,19 +414,19 @@
   gap: 0.45cqw;
   padding-left: 4%;
   color: #151515;
-  font-size: 1.25cqw;
+  font-size: 1.5cqw;
   line-height: 1.2;
 }
 
 .returnCopy > strong {
   margin-bottom: 0.15cqw;
-  font-size: 1.2cqw;
+  font-size: 1.45cqw;
   font-weight: 700;
   text-transform: uppercase;
 }
 
 .returnCopy b {
-  font-size: 1.48cqw;
+  font-size: 1.75cqw;
   font-weight: 900;
 }
 
@@ -449,7 +449,7 @@
 .topWarning > span {
   max-width: 100%;
   color: #111;
-  font-size: 4.1cqw;
+  font-size: 4.5cqw;
   font-weight: 950;
   letter-spacing: 0.025em;
   line-height: 0.98;
@@ -460,7 +460,7 @@
 .topWarning strong {
   margin-top: 0.7cqw;
   color: #333;
-  font-size: 1.18cqw;
+  font-size: 1.4cqw;
   font-weight: 750;
   letter-spacing: 0.18em;
 }
@@ -468,7 +468,7 @@
 .serviceBar {
   display: flex;
   min-height: 0;
-  flex: 0 0 11%;
+  flex: 0 0 10%;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
@@ -478,7 +478,7 @@
 
 .serviceBar strong {
   color: #111;
-  font-size: 3.15cqw;
+  font-size: 3.5cqw;
   font-weight: 950;
   letter-spacing: 0.015em;
   line-height: 1;
@@ -487,7 +487,7 @@
 .serviceBar span {
   flex: 0 0 auto;
   color: #252525;
-  font-size: 1.55cqw;
+  font-size: 1.8cqw;
   font-weight: 650;
   white-space: nowrap;
 }
@@ -495,14 +495,14 @@
 .fromToGrid {
   display: grid;
   min-height: 0;
-  flex: 0 0 29%;
+  flex: 0 0 30%;
   grid-template-columns: 1fr 1fr;
   border-bottom: 2px solid #111;
 }
 
 .addressPanel {
   min-width: 0;
-  padding: 1.4% 2.1%;
+  padding: 0.8% 2.1%;
 }
 
 .addressPanel + .addressPanel {
@@ -512,7 +512,7 @@
 .addressPanel h2 {
   margin: 0 0 0.85cqw;
   color: #111;
-  font-size: 2.3cqw;
+  font-size: 2.7cqw;
   font-weight: 900;
   line-height: 1;
 }
@@ -522,24 +522,24 @@
   flex-direction: column;
   gap: 0.55cqw;
   color: #171717;
-  font-size: 1.55cqw;
+  font-size: 1.8cqw;
   line-height: 1.28;
 }
 
 .addressLines strong {
   margin-bottom: 0.15cqw;
-  font-size: 1.95cqw;
+  font-size: 2.25cqw;
   font-weight: 850;
   line-height: 1.1;
   overflow-wrap: anywhere;
 }
 
 .addressPanel:nth-child(2) .addressLines {
-  font-size: 1.72cqw;
+  font-size: 2cqw;
 }
 
 .addressPanel:nth-child(2) .addressLines strong {
-  font-size: 2.25cqw;
+  font-size: 2.65cqw;
 }
 
 .addressLines span {
@@ -549,15 +549,15 @@
 
 .additionalInfo {
   min-height: 0;
-  flex: 0 0 18%;
+  flex: 0 0 20%;
   border-bottom: 2px solid #111;
-  padding: 1.2% 2.1%;
+  padding: 0.7% 2.1%;
 }
 
 .additionalInfo h2 {
   margin: 0 0 0.75cqw;
   color: #111;
-  font-size: 1.8cqw;
+  font-size: 2cqw;
   font-weight: 900;
   line-height: 1.1;
 }
@@ -567,7 +567,7 @@
   grid-template-columns: 1.4fr 0.8fr 1fr;
   gap: 0.55cqw 1.5cqw;
   color: #191919;
-  font-size: 1.38cqw;
+  font-size: 1.65cqw;
   line-height: 1.25;
 }
 
@@ -620,7 +620,7 @@
 .trackingFooter {
   display: grid;
   min-height: 0;
-  flex: 0 0 20%;
+  flex: 0 0 18%;
   grid-template-columns: 1.2fr 1fr;
 }
 
@@ -636,13 +636,13 @@
 
 .trackingNumber span {
   color: #111;
-  font-size: 1.55cqw;
+  font-size: 1.8cqw;
   font-weight: 850;
 }
 
 .trackingNumber strong {
   color: #111;
-  font-size: 2.35cqw;
+  font-size: 2.7cqw;
   font-weight: 950;
   letter-spacing: 0.035em;
   line-height: 1.12;
@@ -669,7 +669,7 @@
 .barcodeWrap > span,
 .barcodePlaceholder {
   color: #111;
-  font-size: 1.15cqw;
+  font-size: 1.5cqw;
   font-weight: 700;
   letter-spacing: 0.08em;
   line-height: 1;
@@ -812,13 +812,13 @@
   }
 
   .tileCanvas {
-    width: 10cm;
+    width: 12cm;
     height: 7cm;
   }
 
   .label {
     display: flex;
-    width: 10cm;
+    width: 12cm;
     height: 7cm;
     min-width: 0;
     min-height: 7cm;

@@ -308,7 +308,7 @@ export default function ShippingLabelsPage() {
         <div className={styles.pageHeading}>
           <span className={styles.eyebrow}>CUSTOMER TOOLS</span>
           <h1>Shipping label</h1>
-          <p>Print the complete label on one A4 portrait sheet, keeping the 100:70 proportions.</p>
+          <p>Print the complete 120 × 70 mm label near the top of one A4 portrait sheet.</p>
         </div>
         <button type="button" className={styles.printButton} onClick={() => window.print()}>
           <span aria-hidden="true">↗</span> Print on A4
@@ -437,7 +437,7 @@ export default function ShippingLabelsPage() {
               </label>
             ))}
           </div>
-          <p className={styles.editorNote}>The 100:70 label is scaled proportionally to fit one A4 portrait sheet.</p>
+          <p className={styles.editorNote}>The label prints at 120 × 70 mm on one A4 portrait sheet.</p>
         </section>
 
         <section className={styles.previewSection} aria-label="Shipping label preview">
@@ -446,7 +446,7 @@ export default function ShippingLabelsPage() {
               <span className={styles.eyebrow}>LIVE PREVIEW</span>
               <h2>Print ready</h2>
             </div>
-            <span className={styles.sizeBadge}>100:70 proportions <i>·</i> one A4 sheet</span>
+            <span className={styles.sizeBadge}>120 × 70 mm <i>·</i> one A4 sheet</span>
           </div>
           {renderLabelArtwork()}
         </section>
