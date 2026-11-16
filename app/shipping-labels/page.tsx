@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import JsBarcode from "jsbarcode";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import styles from "./shipping-labels.module.css";
 
@@ -42,48 +43,32 @@ const warningOptions: { key: WarningKey; label: string }[] = [
 
 const A4_PRINT_PAGES = [1];
 
-const code39Patterns: Record<string, string> = {
-  "0": "nnnwwnwnn", "1": "wnnwnnnnw", "2": "nnwwnnnnw", "3": "wnwwnnnnn",
-  "4": "nnnwwnnnw", "5": "wnnwwnnnn", "6": "nnwwwnnnn", "7": "nnnwnnwnw",
-  "8": "wnnwnnwnn", "9": "nnwwnnwnn", A: "wnnnnwnnw", B: "nnwnnwnnw",
-  C: "wnwnnwnnn", D: "nnnnwwnnw", E: "wnnnwwnnn", F: "nnwnwwnnn",
-  G: "nnnnnwwnw", H: "wnnnnwwnn", I: "nnwnnwwnn", J: "nnnnwwwnn",
-  K: "wnnnnnnww", L: "nnwnnnnww", M: "wnwnnnnwn", N: "nnnnwnnww",
-  O: "wnnnwnnwn", P: "nnwnwnnwn", Q: "nnnnnnwww", R: "wnnnnnwwn",
-  S: "nnwnnnwwn", T: "nnnnwnwwn", U: "wwnnnnnnw", V: "nwwnnnnnw",
-  W: "wwwnnnnnn", X: "nwnnwnnnw", Y: "wwnnwnnnn", Z: "nwwnwnnnn",
-  "-": "nwnnnnwnw", ".": "wwnnnnwnn", " ": "nwwnnnwnn", "$": "nwnwnwnnn",
-  "/": "nwnwnnnwn", "+": "nwnnnwnwn", "%": "nnnwnwnwn", "*": "nwnnwnwnn",
-};
-
 function TrackingBarcode({ value }: { value: string }) {
-  const trackingNumber = value.trim().toUpperCase();
-  const canEncode = trackingNumber.length > 0 &&
-    trackingNumber.split("").every((character) => Object.hasOwn(code39Patterns, character));
+  const barcodeRef = useRef<SVGSVGElement>(null);
+  const trackingNumber = value.trim();
+  const canEncode = /^[\x20-\x7E]+$/.test(trackingNumber);
+
+  useEffect(() => {
+    const svg = barcodeRef.current;
+    if (!svg || !canEncode) return;
+
+    svg.replaceChildren();
+    JsBarcode(svg, trackingNumber, {
+      format: "CODE128",
+      displayValue: false,
+      lineColor: "#111111",
+      background: "#ffffff",
+      width: 2,
+      height: 100,
+      margin: 10,
+    });
+  }, [canEncode, trackingNumber]);
 
   if (!canEncode) {
-    return <div className={styles.barcodePlaceholder}>ENTER A CODE 39 TRACKING NUMBER FOR BARCODE</div>;
+    return <div className={styles.barcodePlaceholder}>A CODE 128 BARCODE WILL APPEAR HERE</div>;
   }
 
-  const bars: { x: number; width: number }[] = [];
-  let cursor = 10;
-
-  for (const character of `*${trackingNumber}*`) {
-    const pattern = code39Patterns[character];
-    pattern.split("").forEach((size, index) => {
-      const width = size === "w" ? 3 : 1;
-      if (index % 2 === 0) bars.push({ x: cursor, width });
-      cursor += width;
-    });
-    cursor += 1;
-  }
-
-  return (
-    <svg className={styles.barcode} viewBox={`0 0 ${cursor + 9} 100`} preserveAspectRatio="none" role="img" aria-label={`Code 39 barcode for ${trackingNumber}`}>
-      <rect x="0" y="0" width={cursor + 9} height="100" fill="#fff" />
-      {bars.map((bar, index) => <rect key={index} x={bar.x} y="0" width={bar.width} height="100" fill="#111" />)}
-    </svg>
-  );
+  return <svg ref={barcodeRef} className={styles.barcode} preserveAspectRatio="none" role="img" aria-label={`Code 128 barcode for ${trackingNumber}`} />;
 }
 
 function WarningIcon({ type }: { type: WarningKey }) {
@@ -120,23 +105,14 @@ function WarningIcon({ type }: { type: WarningKey }) {
 }
 
 function generateTrackingNumber() {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Colombo",
-    year: "2-digit",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(new Date());
-  const part = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((entry) => entry.type === type)?.value ?? "00";
-  const randomSuffix = typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID().slice(0, 6).toUpperCase()
-    : Math.random().toString(36).slice(2, 8).toUpperCase();
+  const randomValue = new Uint32Array(1);
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    crypto.getRandomValues(randomValue);
+  } else {
+    randomValue[0] = Math.floor(Math.random() * 1_000_000);
+  }
 
-  return `PC-${part("year")}${part("month")}${part("day")}-${part("hour")}${part("minute")}${part("second")}-${randomSuffix}`;
+  return `PC-${String(randomValue[0] % 1_000_000).padStart(6, "0")}`;
 }
 
 export default function ShippingLabelsPage() {
@@ -420,7 +396,7 @@ export default function ShippingLabelsPage() {
             placeholder="e.g. Leave at front desk"
             rows={2}
           />
-          <p className={styles.helper}>A tracking number and matching barcode are generated automatically.</p>
+          <p className={styles.helper}>Tracking numbers use PC-###### format with a matching Code 128 barcode.</p>
 
           <div className={styles.warningHeader}>
             <div>
