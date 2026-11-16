@@ -691,6 +691,10 @@
   white-space: nowrap;
 }
 
+.a4PrintPages {
+  display: none;
+}
+
 @media (max-width: 1180px) {
   .page {
     padding: 22px;
@@ -744,15 +748,15 @@
 }
 
 @page {
-  size: 100cm 70cm;
+  size: A4 landscape;
   margin: 0;
 }
 
 @media print {
   :global(html),
   :global(body) {
-    width: 100cm !important;
-    height: 70cm !important;
+    width: 29.7cm !important;
+    height: auto !important;
     min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -764,8 +768,8 @@
   }
 
   :global(body:has([data-shipping-label]) > main) {
-    width: 100cm !important;
-    height: 70cm !important;
+    width: 29.7cm !important;
+    height: auto !important;
     min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -773,29 +777,52 @@
   }
 
   .page {
-    width: 100cm;
-    height: 70cm;
+    width: 29.7cm;
+    height: auto;
     min-height: 0;
     margin: 0;
     padding: 0;
-    overflow: hidden;
+    overflow: visible;
     background: #fff;
   }
 
   .noPrint,
-  .editor {
+  .editor,
+  .workspace,
+  .previewSection {
     display: none !important;
   }
 
-  .workspace,
-  .previewSection {
+  .a4PrintPages {
     display: block;
-    width: 100cm;
-    height: 70cm;
-    max-width: none;
+    width: 29.7cm;
     margin: 0;
     padding: 0;
+  }
+
+  .a4Sheet {
+    position: relative;
+    width: 29.7cm;
+    height: 21cm;
     overflow: hidden;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .a4Sheet:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .tileCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100cm;
+    height: 70cm;
+    transform-origin: top left;
   }
 
   .label {

@@ -40,6 +40,12 @@ const warningOptions: { key: WarningKey; label: string }[] = [
   { key: "noStack", label: "Do not stack" },
 ];
 
+const A4_TILES = Array.from({ length: 16 }, (_, index) => ({
+  page: index + 1,
+  column: index % 4,
+  row: Math.floor(index / 4),
+}));
+
 const code39Patterns: Record<string, string> = {
   "0": "nnnwwnwnn", "1": "wnnwnnnnw", "2": "nnwwnnnnw", "3": "wnwwnnnnn",
   "4": "nnnwwnnnw", "5": "wnnwwnnnn", "6": "nnwwwnnnn", "7": "nnnwnnwnw",
@@ -218,16 +224,98 @@ export default function ShippingLabelsPage() {
     timeZone: "Asia/Colombo",
   }).format(new Date());
 
+  function renderLabelArtwork() {
+    return (
+      <article className={styles.label} data-shipping-label>
+        <header className={styles.labelHeader}>
+          <div className={styles.returnAddress}>
+            <div className={styles.logoFrame}>
+              <Image src="/logo.png" alt="Print & Craft logo" width={7023} height={1948} className={styles.logo} />
+            </div>
+            <div className={styles.returnCopy}>
+              <strong>RETURN ADDRESS</strong>
+              <b>PRINT &amp; CRAFT (PVT) LTD.</b>
+              <span>No.343, Main Road, Kinniya 01, Trincomalee, Sri Lanka</span>
+              <span>+94 75 713 8882 · info.printncrafts@gmail.com</span>
+            </div>
+          </div>
+          <div className={styles.topWarning}>
+            <span>{activeWarnings[0]?.label.toUpperCase() || "DELIVERY"}</span>
+            <strong>
+              {activeWarnings.some(({ key }) => key === "fragile")
+                ? "PLEASE HANDLE WITH CARE"
+                : activeWarnings.length > 0
+                  ? "FOLLOW HANDLING SYMBOLS"
+                  : "CUSTOMER DELIVERY"}
+            </strong>
+          </div>
+        </header>
+
+        <div className={styles.serviceBar}>
+          <strong>SHIPPING LABEL</strong>
+          <span>DATE: {labelDate}</span>
+        </div>
+
+        <div className={styles.fromToGrid}>
+          <section className={styles.addressPanel}>
+            <h2>FROM:</h2>
+            <div className={styles.addressLines}>
+              <strong>PRINT &amp; CRAFT (PVT) LTD.</strong>
+              <span>No.343, Main Road, Kinniya 01, Trincomalee, Sri Lanka</span>
+              <span>Phone: +94 75 713 8882</span>
+              <span>WhatsApp: +94 75 713 8882</span>
+            </div>
+          </section>
+          <section className={styles.addressPanel}>
+            <h2>TO:</h2>
+            <div className={styles.addressLines}>
+              <strong>{details.recipientName || "Recipient name"}</strong>
+              <span>{details.recipientAddress || "Delivery address"}</span>
+              <span>Phone: {details.recipientPhone || "Add recipient phone"}</span>
+            </div>
+          </section>
+        </div>
+
+        <section className={styles.additionalInfo}>
+          <h2>ADDITIONAL INFORMATION:</h2>
+          <div className={styles.infoGrid}>
+            <p><strong>Package contents:</strong> {details.contents || "—"}</p>
+            <p><strong>Insurance:</strong> {insuranceRequired ? "Yes" : "No"}</p>
+            <p><strong>Signature required:</strong> {signatureRequired ? "Yes" : "No"}</p>
+            <div className={`${styles.wideInfo} ${styles.handlingInfo}`}>
+              <strong>Handling:</strong>
+              {activeWarnings.length > 0 ? activeWarnings.map(({ key, label }) => (
+                <span className={styles.handlingTag} key={key}><WarningIcon type={key} />{label}</span>
+              )) : <span>Standard handling</span>}
+            </div>
+            <p className={styles.wideInfo}><strong>Special instructions:</strong> {details.specialInstructions || "None"}</p>
+          </div>
+        </section>
+
+        <footer className={styles.trackingFooter}>
+          <div className={styles.trackingNumber}>
+            <span>TRACKING NUMBER</span>
+            <strong>{details.reference || "ENTER TRACKING NUMBER"}</strong>
+          </div>
+          <div className={styles.barcodeWrap}>
+            <TrackingBarcode value={details.reference} />
+            <span>{details.reference.trim().toUpperCase() || "BARCODE"}</span>
+          </div>
+        </footer>
+      </article>
+    );
+  }
+
   return (
     <main className={styles.page}>
       <div className={`${styles.toolbar} ${styles.noPrint}`}>
         <div className={styles.pageHeading}>
           <span className={styles.eyebrow}>CUSTOMER TOOLS</span>
           <h1>Shipping label</h1>
-          <p>Prepare a customer label and print it in landscape at 100 × 70 cm.</p>
+          <p>Print the 100 × 70 cm label across 16 A4 landscape sheets arranged in a 4 × 4 grid.</p>
         </div>
         <button type="button" className={styles.printButton} onClick={() => window.print()}>
-          <span aria-hidden="true">↗</span> Print label
+          <span aria-hidden="true">↗</span> Print A4 tiles
         </button>
       </div>
 
@@ -353,7 +441,7 @@ export default function ShippingLabelsPage() {
               </label>
             ))}
           </div>
-          <p className={styles.editorNote}>Print dialog page setup: landscape, custom paper 100 × 70 cm, scale 100%.</p>
+          <p className={styles.editorNote}>Print all 16 A4 landscape sheets at 100% scale. Arrange them in a 4 × 4 grid, then trim and join to make the 100 × 70 cm label.</p>
         </section>
 
         <section className={styles.previewSection} aria-label="Shipping label preview">
@@ -362,87 +450,23 @@ export default function ShippingLabelsPage() {
               <span className={styles.eyebrow}>LIVE PREVIEW</span>
               <h2>Print ready</h2>
             </div>
-            <span className={styles.sizeBadge}>100 × 70 cm <i>·</i> Landscape</span>
+            <span className={styles.sizeBadge}>100 × 70 cm <i>·</i> 4 × 4 A4 sheets</span>
           </div>
-
-          <article className={styles.label} data-shipping-label>
-            <header className={styles.labelHeader}>
-              <div className={styles.returnAddress}>
-                <div className={styles.logoFrame}>
-                  <Image src="/logo.png" alt="Print & Craft logo" width={7023} height={1948} className={styles.logo} />
-                </div>
-                <div className={styles.returnCopy}>
-                  <strong>RETURN ADDRESS</strong>
-                  <b>PRINT &amp; CRAFT (PVT) LTD.</b>
-                  <span>No.343, Main Road, Kinniya 01, Trincomalee, Sri Lanka</span>
-                  <span>+94 75 713 8882 · info.printncrafts@gmail.com</span>
-                </div>
-              </div>
-              <div className={styles.topWarning}>
-                <span>{activeWarnings[0]?.label.toUpperCase() || "DELIVERY"}</span>
-                <strong>
-                  {activeWarnings.some(({ key }) => key === "fragile")
-                    ? "PLEASE HANDLE WITH CARE"
-                    : activeWarnings.length > 0
-                      ? "FOLLOW HANDLING SYMBOLS"
-                      : "CUSTOMER DELIVERY"}
-                </strong>
-              </div>
-            </header>
-
-            <div className={styles.serviceBar}>
-              <strong>SHIPPING LABEL</strong>
-              <span>DATE: {labelDate}</span>
-            </div>
-
-            <div className={styles.fromToGrid}>
-              <section className={styles.addressPanel}>
-                <h2>FROM:</h2>
-                <div className={styles.addressLines}>
-                  <strong>PRINT &amp; CRAFT (PVT) LTD.</strong>
-                  <span>No.343, Main Road, Kinniya 01, Trincomalee, Sri Lanka</span>
-                  <span>Phone: +94 75 713 8882</span>
-                  <span>WhatsApp: +94 75 713 8882</span>
-                </div>
-              </section>
-              <section className={styles.addressPanel}>
-                <h2>TO:</h2>
-                <div className={styles.addressLines}>
-                  <strong>{details.recipientName || "Recipient name"}</strong>
-                  <span>{details.recipientAddress || "Delivery address"}</span>
-                  <span>Phone: {details.recipientPhone || "Add recipient phone"}</span>
-                </div>
-              </section>
-            </div>
-
-            <section className={styles.additionalInfo}>
-              <h2>ADDITIONAL INFORMATION:</h2>
-              <div className={styles.infoGrid}>
-                <p><strong>Package contents:</strong> {details.contents || "—"}</p>
-                <p><strong>Insurance:</strong> {insuranceRequired ? "Yes" : "No"}</p>
-                <p><strong>Signature required:</strong> {signatureRequired ? "Yes" : "No"}</p>
-                <div className={`${styles.wideInfo} ${styles.handlingInfo}`}>
-                  <strong>Handling:</strong>
-                  {activeWarnings.length > 0 ? activeWarnings.map(({ key, label }) => (
-                    <span className={styles.handlingTag} key={key}><WarningIcon type={key} />{label}</span>
-                  )) : <span>Standard handling</span>}
-                </div>
-                <p className={styles.wideInfo}><strong>Special instructions:</strong> {details.specialInstructions || "None"}</p>
-              </div>
-            </section>
-
-            <footer className={styles.trackingFooter}>
-              <div className={styles.trackingNumber}>
-                <span>TRACKING NUMBER</span>
-                <strong>{details.reference || "ENTER TRACKING NUMBER"}</strong>
-              </div>
-              <div className={styles.barcodeWrap}>
-                <TrackingBarcode value={details.reference} />
-                <span>{details.reference.trim().toUpperCase() || "BARCODE"}</span>
-              </div>
-            </footer>
-          </article>
+          {renderLabelArtwork()}
         </section>
+      </div>
+
+      <div className={styles.a4PrintPages} aria-hidden="true">
+        {A4_TILES.map((tile) => (
+          <section className={styles.a4Sheet} key={tile.page}>
+            <div
+              className={styles.tileCanvas}
+              style={{ transform: `translate(${-tile.column * 29.7}cm, ${-tile.row * 21}cm)` }}
+            >
+              {renderLabelArtwork()}
+            </div>
+          </section>
+        ))}
       </div>
     </main>
   );
