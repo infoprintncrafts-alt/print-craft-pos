@@ -12,6 +12,7 @@ const mainMenu = [
   { name: "New Sale", href: "/sales", icon: "＋" },
   { name: "Sales History", href: "/sales-history", icon: "▣" },
   { name: "Customers", href: "/customers", icon: "♙" },
+  { name: "Shipping Labels", href: "/shipping-labels", icon: "SL" },
   { name: "Products", href: "/products", icon: "▦" },
   { name: "Categories", href: "/categories", icon: "▤" },
   { name: "Inventory", href: "/inventory", icon: "📦" },
