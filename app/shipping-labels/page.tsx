@@ -19,6 +19,7 @@ type LabelDetails = {
   recipientAddress: string;
   reference: string;
   contents: string;
+  specialInstructions: string;
 };
 
 type WarningKey = "fragile" | "upright" | "dry" | "noStack";
@@ -29,6 +30,7 @@ const initialDetails: LabelDetails = {
   recipientAddress: "",
   reference: "",
   contents: "",
+  specialInstructions: "",
 };
 
 const warningOptions: { key: WarningKey; label: string }[] = [
@@ -37,6 +39,50 @@ const warningOptions: { key: WarningKey; label: string }[] = [
   { key: "dry", label: "Keep dry" },
   { key: "noStack", label: "Do not stack" },
 ];
+
+const code39Patterns: Record<string, string> = {
+  "0": "nnnwwnwnn", "1": "wnnwnnnnw", "2": "nnwwnnnnw", "3": "wnwwnnnnn",
+  "4": "nnnwwnnnw", "5": "wnnwwnnnn", "6": "nnwwwnnnn", "7": "nnnwnnwnw",
+  "8": "wnnwnnwnn", "9": "nnwwnnwnn", A: "wnnnnwnnw", B: "nnwnnwnnw",
+  C: "wnwnnwnnn", D: "nnnnwwnnw", E: "wnnnwwnnn", F: "nnwnwwnnn",
+  G: "nnnnnwwnw", H: "wnnnnwwnn", I: "nnwnnwwnn", J: "nnnnwwwnn",
+  K: "wnnnnnnww", L: "nnwnnnnww", M: "wnwnnnnwn", N: "nnnnwnnww",
+  O: "wnnnwnnwn", P: "nnwnwnnwn", Q: "nnnnnnwww", R: "wnnnnnwwn",
+  S: "nnwnnnwwn", T: "nnnnwnwwn", U: "wwnnnnnnw", V: "nwwnnnnnw",
+  W: "wwwnnnnnn", X: "nwnnwnnnw", Y: "wwnnwnnnn", Z: "nwwnwnnnn",
+  "-": "nwnnnnwnw", ".": "wwnnnnwnn", " ": "nwwnnnwnn", "$": "nwnwnwnnn",
+  "/": "nwnwnnnwn", "+": "nwnnnwnwn", "%": "nnnwnwnwn", "*": "nwnnwnwnn",
+};
+
+function TrackingBarcode({ value }: { value: string }) {
+  const trackingNumber = value.trim().toUpperCase();
+  const canEncode = trackingNumber.length > 0 &&
+    trackingNumber.split("").every((character) => Object.hasOwn(code39Patterns, character));
+
+  if (!canEncode) {
+    return <div className={styles.barcodePlaceholder}>ENTER A CODE 39 TRACKING NUMBER FOR BARCODE</div>;
+  }
+
+  const bars: { x: number; width: number }[] = [];
+  let cursor = 10;
+
+  for (const character of `*${trackingNumber}*`) {
+    const pattern = code39Patterns[character];
+    pattern.split("").forEach((size, index) => {
+      const width = size === "w" ? 3 : 1;
+      if (index % 2 === 0) bars.push({ x: cursor, width });
+      cursor += width;
+    });
+    cursor += 1;
+  }
+
+  return (
+    <svg className={styles.barcode} viewBox={`0 0 ${cursor + 9} 100`} preserveAspectRatio="none" role="img" aria-label={`Code 39 barcode for ${trackingNumber}`}>
+      <rect x="0" y="0" width={cursor + 9} height="100" fill="#fff" />
+      {bars.map((bar, index) => <rect key={index} x={bar.x} y="0" width={bar.width} height="100" fill="#111" />)}
+    </svg>
+  );
+}
 
 function WarningIcon({ type }: { type: WarningKey }) {
   if (type === "fragile") {
@@ -81,6 +127,8 @@ export default function ShippingLabelsPage() {
     dry: false,
     noStack: false,
   });
+  const [signatureRequired, setSignatureRequired] = useState(false);
+  const [insuranceRequired, setInsuranceRequired] = useState(false);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
   const [customerLoadError, setCustomerLoadError] = useState("");
 
@@ -137,6 +185,12 @@ export default function ShippingLabelsPage() {
   }
 
   const activeWarnings = warningOptions.filter(({ key }) => warnings[key]);
+  const labelDate = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Colombo",
+  }).format(new Date());
 
   return (
     <main className={styles.page}>
@@ -206,13 +260,13 @@ export default function ShippingLabelsPage() {
 
           <div className={styles.twoFields}>
             <div>
-              <label className={styles.fieldLabel} htmlFor="label-reference">Order / tracking no.</label>
+              <label className={styles.fieldLabel} htmlFor="label-reference">Tracking number</label>
               <input
                 id="label-reference"
                 className={styles.field}
                 value={details.reference}
                 onChange={(event) => updateDetails("reference", event.target.value)}
-                placeholder="Optional"
+                placeholder="Enter a tracking number"
               />
             </div>
             <div>
@@ -226,6 +280,28 @@ export default function ShippingLabelsPage() {
               />
             </div>
           </div>
+
+          <div className={styles.deliveryOptions}>
+            <label className={styles.deliveryOption}>
+              <input type="checkbox" checked={insuranceRequired} onChange={() => setInsuranceRequired((value) => !value)} />
+              <span>Insurance required</span>
+            </label>
+            <label className={styles.deliveryOption}>
+              <input type="checkbox" checked={signatureRequired} onChange={() => setSignatureRequired((value) => !value)} />
+              <span>Signature required</span>
+            </label>
+          </div>
+
+          <label className={styles.fieldLabel} htmlFor="label-instructions">Special instructions</label>
+          <textarea
+            id="label-instructions"
+            className={`${styles.field} ${styles.addressField}`}
+            value={details.specialInstructions}
+            onChange={(event) => updateDetails("specialInstructions", event.target.value)}
+            placeholder="e.g. Leave at front desk"
+            rows={2}
+          />
+          <p className={styles.helper}>Barcode uses Code 39: A–Z, 0–9, space, and - . $ / + %.</p>
 
           <div className={styles.warningHeader}>
             <div>
@@ -256,68 +332,78 @@ export default function ShippingLabelsPage() {
 
           <article className={styles.label} data-shipping-label>
             <header className={styles.labelHeader}>
-              <div className={styles.sender}>
-                <Image src="/logo.png" alt="Print & Craft logo" width={7023} height={1948} className={styles.logo} />
-                <div className={styles.senderDetails}>
-                  <strong>PRINT &amp; CRAFT (PVT) LTD.</strong>
+              <div className={styles.returnAddress}>
+                <div className={styles.logoFrame}>
+                  <Image src="/logo.png" alt="Print & Craft logo" width={7023} height={1948} className={styles.logo} />
+                </div>
+                <div className={styles.returnCopy}>
+                  <strong>RETURN ADDRESS</strong>
+                  <b>PRINT &amp; CRAFT (PVT) LTD.</b>
                   <span>No.343, Main Road, Kinniya 01, Trincomalee, Sri Lanka</span>
-                  <span>Tel / WhatsApp: +94 75 713 8882 · info.printncrafts@gmail.com</span>
+                  <span>+94 75 713 8882 · info.printncrafts@gmail.com</span>
                 </div>
               </div>
-              <div className={styles.labelTitle}>
-                <span>DELIVERY</span>
-                <h2>SHIPPING LABEL</h2>
-                <div>PRINT &amp; CRAFT <b>·</b> SRI LANKA</div>
+              <div className={styles.topWarning}>
+                <span>{activeWarnings[0]?.label.toUpperCase() || "DELIVERY"}</span>
+                <strong>
+                  {activeWarnings.some(({ key }) => key === "fragile")
+                    ? "PLEASE HANDLE WITH CARE"
+                    : activeWarnings.length > 0
+                      ? "FOLLOW HANDLING SYMBOLS"
+                      : "CUSTOMER DELIVERY"}
+                </strong>
               </div>
             </header>
 
-            <div className={styles.labelRule} />
-
-            <div className={styles.labelBody}>
-              <section className={styles.destination}>
-                <div className={styles.destinationHeading}>
-                  <span className={styles.toIcon} aria-hidden="true">→</span>
-                  <div>
-                    <span>DELIVER TO</span>
-                    <h3>RECIPIENT</h3>
-                  </div>
-                </div>
-                <div className={styles.recipientName}>{details.recipientName || "Recipient name"}</div>
-                <div className={styles.recipientAddress}>{details.recipientAddress || "Delivery address will appear here"}</div>
-                {details.recipientPhone && <div className={styles.recipientPhone}><span>CONTACT</span>{details.recipientPhone}</div>}
-              </section>
-
-              <aside className={styles.shipmentDetails}>
-                <div className={styles.shipmentMark} aria-hidden="true"><span>PC</span><i>→</i></div>
-                <div className={styles.referenceBlock}>
-                  <span>ORDER / TRACKING NO.</span>
-                  <strong>{details.reference || "— — — — — — — —"}</strong>
-                </div>
-                {details.contents && (
-                  <div className={styles.contentsBlock}>
-                    <span>PACKAGE CONTENTS</span>
-                    <strong>{details.contents}</strong>
-                  </div>
-                )}
-                <div className={styles.originBlock}>
-                  <span>SENT WITH CARE FROM</span>
-                  <strong>KINNIYA · SRI LANKA</strong>
-                </div>
-              </aside>
+            <div className={styles.serviceBar}>
+              <strong>SHIPPING LABEL</strong>
+              <span>DATE: {labelDate}</span>
             </div>
 
-            <footer className={styles.labelFooter}>
-              <div className={styles.warningStrip}>
-                {activeWarnings.length > 0 ? activeWarnings.map(({ key, label }) => (
-                  <div className={styles.warningItem} key={key}>
-                    <WarningIcon type={key} />
-                    <span>{label}</span>
-                  </div>
-                )) : <div className={styles.noWarnings}>STANDARD HANDLING</div>}
+            <div className={styles.fromToGrid}>
+              <section className={styles.addressPanel}>
+                <h2>FROM:</h2>
+                <div className={styles.addressLines}>
+                  <strong>PRINT &amp; CRAFT (PVT) LTD.</strong>
+                  <span>No.343, Main Road, Kinniya 01, Trincomalee, Sri Lanka</span>
+                  <span>Phone: +94 75 713 8882</span>
+                  <span>WhatsApp: +94 75 713 8882</span>
+                </div>
+              </section>
+              <section className={styles.addressPanel}>
+                <h2>TO:</h2>
+                <div className={styles.addressLines}>
+                  <strong>{details.recipientName || "Recipient name"}</strong>
+                  <span>{details.recipientAddress || "Delivery address"}</span>
+                  <span>Phone: {details.recipientPhone || "Add recipient phone"}</span>
+                </div>
+              </section>
+            </div>
+
+            <section className={styles.additionalInfo}>
+              <h2>ADDITIONAL INFORMATION:</h2>
+              <div className={styles.infoGrid}>
+                <p><strong>Package contents:</strong> {details.contents || "—"}</p>
+                <p><strong>Insurance:</strong> {insuranceRequired ? "Yes" : "No"}</p>
+                <p><strong>Signature required:</strong> {signatureRequired ? "Yes" : "No"}</p>
+                <div className={`${styles.wideInfo} ${styles.handlingInfo}`}>
+                  <strong>Handling:</strong>
+                  {activeWarnings.length > 0 ? activeWarnings.map(({ key, label }) => (
+                    <span className={styles.handlingTag} key={key}><WarningIcon type={key} />{label}</span>
+                  )) : <span>Standard handling</span>}
+                </div>
+                <p className={styles.wideInfo}><strong>Special instructions:</strong> {details.specialInstructions || "None"}</p>
               </div>
-              <div className={styles.footerBrand}>
-                <strong>PRINT &amp; CRAFT</strong>
-                <span>PRINTING · DESIGNING · CUSTOMIZED GIFTS</span>
+            </section>
+
+            <footer className={styles.trackingFooter}>
+              <div className={styles.trackingNumber}>
+                <span>TRACKING NUMBER</span>
+                <strong>{details.reference || "ENTER TRACKING NUMBER"}</strong>
+              </div>
+              <div className={styles.barcodeWrap}>
+                <TrackingBarcode value={details.reference} />
+                <span>{details.reference.trim().toUpperCase() || "BARCODE"}</span>
               </div>
             </footer>
           </article>
