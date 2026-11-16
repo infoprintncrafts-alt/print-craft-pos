@@ -117,6 +117,26 @@ function WarningIcon({ type }: { type: WarningKey }) {
   );
 }
 
+function generateTrackingNumber() {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Colombo",
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((entry) => entry.type === type)?.value ?? "00";
+  const randomSuffix = typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID().slice(0, 6).toUpperCase()
+    : Math.random().toString(36).slice(2, 8).toUpperCase();
+
+  return `PC-${part("year")}${part("month")}${part("day")}-${part("hour")}${part("minute")}${part("second")}-${randomSuffix}`;
+}
+
 export default function ShippingLabelsPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
@@ -157,6 +177,12 @@ export default function ShippingLabelsPage() {
     return () => {
       active = false;
     };
+  }, []);
+
+  useEffect(() => {
+    setDetails((current) => current.reference
+      ? current
+      : { ...current, reference: generateTrackingNumber() });
   }, []);
 
   function updateDetails(field: keyof LabelDetails, value: string) {
@@ -261,13 +287,22 @@ export default function ShippingLabelsPage() {
           <div className={styles.twoFields}>
             <div>
               <label className={styles.fieldLabel} htmlFor="label-reference">Tracking number</label>
-              <input
-                id="label-reference"
-                className={styles.field}
-                value={details.reference}
-                onChange={(event) => updateDetails("reference", event.target.value)}
-                placeholder="Enter a tracking number"
-              />
+              <div className={styles.trackingInputRow}>
+                <input
+                  id="label-reference"
+                  className={styles.field}
+                  value={details.reference}
+                  onChange={(event) => updateDetails("reference", event.target.value)}
+                  placeholder="Auto generated"
+                />
+                <button
+                  type="button"
+                  className={styles.newTrackingButton}
+                  onClick={() => updateDetails("reference", generateTrackingNumber())}
+                >
+                  New number
+                </button>
+              </div>
             </div>
             <div>
               <label className={styles.fieldLabel} htmlFor="label-contents">Package contents</label>
@@ -301,7 +336,7 @@ export default function ShippingLabelsPage() {
             placeholder="e.g. Leave at front desk"
             rows={2}
           />
-          <p className={styles.helper}>Barcode uses Code 39: A–Z, 0–9, space, and - . $ / + %.</p>
+          <p className={styles.helper}>A tracking number and matching barcode are generated automatically.</p>
 
           <div className={styles.warningHeader}>
             <div>

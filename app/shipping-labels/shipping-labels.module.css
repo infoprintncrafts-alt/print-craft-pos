@@ -152,6 +152,35 @@
   box-shadow: 0 0 0 3px #4380ba1c;
 }
 
+.trackingInputRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.trackingInputRow .field {
+  min-width: 0;
+  flex: 1;
+}
+
+.newTrackingButton {
+  min-height: 40px;
+  flex: 0 0 auto;
+  border: 1px solid #cbd7e4;
+  border-radius: 8px;
+  padding: 0 9px;
+  background: #f7f9fb;
+  color: #274766;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.newTrackingButton:hover {
+  border-color: #8da8c2;
+  background: #edf3f8;
+}
+
 .field::placeholder {
   color: #a2afbd;
 }
