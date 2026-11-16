@@ -2551,7 +2551,7 @@ export default function SalesPage() {
                   type="button"
                   onClick={() =>
                     router.push(
-                      `/sales/${savedSale.saleId}`
+                      `/sales/invoice/${savedSale.saleId}`
                     )
                   }
                   className="rounded-xl bg-black px-5 py-3 font-bold text-white"
