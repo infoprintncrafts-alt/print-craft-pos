@@ -621,6 +621,7 @@
   display: grid;
   min-height: 0;
   flex: 0 0 18%;
+  align-items: stretch;
   grid-template-columns: 1.2fr 1fr;
 }
 
@@ -629,9 +630,15 @@
   min-width: 0;
   flex-direction: column;
   justify-content: center;
-  gap: 0.55cqw;
   border-right: 2px solid #111;
   padding: 0 2.1%;
+}
+
+.trackingCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55cqw;
+  margin-block: auto;
 }
 
 .trackingNumber span {
@@ -650,19 +657,19 @@
 }
 
 .barcodeWrap {
-  display: flex;
+  display: grid;
   min-width: 0;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25cqw;
-  padding: 1.1% 2.3% 0.65%;
+  grid-template-rows: auto auto;
+  align-content: center;
+  justify-items: center;
+  gap: 0.35cqw;
+  padding: 0 2.3%;
 }
 
 .barcode {
   display: block;
   width: 100%;
-  height: 78%;
+  height: 6.5cqw;
   min-height: 0;
 }
 
@@ -680,7 +687,7 @@
 .barcodePlaceholder {
   display: flex;
   width: 100%;
-  height: 78%;
+  height: 6.5cqw;
   align-items: center;
   justify-content: center;
   border: 1px dashed #555;

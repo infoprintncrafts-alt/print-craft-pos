@@ -266,8 +266,10 @@ export default function ShippingLabelsPage() {
 
         <footer className={styles.trackingFooter}>
           <div className={styles.trackingNumber}>
-            <span>TRACKING NUMBER</span>
-            <strong>{details.reference || "ENTER TRACKING NUMBER"}</strong>
+            <div className={styles.trackingCopy}>
+              <span>TRACKING NUMBER</span>
+              <strong>{details.reference || "ENTER TRACKING NUMBER"}</strong>
+            </div>
           </div>
           <div className={styles.barcodeWrap}>
             <TrackingBarcode value={details.reference} />
