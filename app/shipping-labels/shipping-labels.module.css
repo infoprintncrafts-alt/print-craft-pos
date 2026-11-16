@@ -466,7 +466,7 @@
 .fromToGrid {
   display: grid;
   min-height: 0;
-  flex: 0 0 31%;
+  flex: 0 0 29%;
   grid-template-columns: 1fr 1fr;
   border-bottom: 2px solid #111;
 }
@@ -512,7 +512,7 @@
 
 .additionalInfo {
   min-height: 0;
-  flex: 0 0 21%;
+  flex: 0 0 18%;
   border-bottom: 2px solid #111;
   padding: 1.2% 2.1%;
 }
@@ -583,8 +583,8 @@
 .trackingFooter {
   display: grid;
   min-height: 0;
-  flex: 1 1 15%;
-  grid-template-columns: 1fr 1.1fr;
+  flex: 0 0 20%;
+  grid-template-columns: 1.2fr 1fr;
 }
 
 .trackingNumber {
@@ -592,9 +592,9 @@
   min-width: 0;
   flex-direction: column;
   justify-content: center;
-  gap: 0.8cqw;
+  gap: 0.55cqw;
   border-right: 2px solid #111;
-  padding: 1.2% 2.1%;
+  padding: 0 2.1%;
 }
 
 .trackingNumber span {
@@ -605,10 +605,10 @@
 
 .trackingNumber strong {
   color: #111;
-  font-size: 2.65cqw;
+  font-size: 2.35cqw;
   font-weight: 950;
   letter-spacing: 0.035em;
-  line-height: 1.05;
+  line-height: 1.12;
   overflow-wrap: anywhere;
 }
 
@@ -861,7 +861,7 @@
   }
 
   .trackingNumber strong {
-    font-size: 2.65cm;
+    font-size: 2.35cm;
   }
 
   .barcodeWrap > span,
