@@ -849,15 +849,7 @@ export default function SalesPage() {
   function createWhatsAppMessage(
     sale: SavedSaleSnapshot
   ) {
-    let message =
-      `Hello ${
-        sale.customer?.name ??
-        "Customer"
-      },\n\n` +
-      `Thank you for choosing *PRINT & CRAFT (PVT) LTD.*\n\n` +
-      `🧾 Invoice: ${sale.invoiceNumber}\n\n`;
-
-    sale.cart.forEach((item) => {
+    const itemLines = sale.cart.map((item) => {
       const price = Number(
         item.product.selling_price || 0
       );
@@ -872,44 +864,27 @@ export default function SalesPage() {
           0
         );
 
-      message +=
-        `${item.product.name} × ${
-          item.quantity
-        } = ${money(lineTotal)}\n`;
+      return `• ${item.product.name} × ${item.quantity} — ${money(lineTotal)}`;
     });
 
-    message +=
-      `\nGross Subtotal: ${money(
-        sale.grossSubtotal
-      )}` +
-      `\nItem Discount: ${money(
-        sale.itemDiscount
-      )}` +
-      `\nSubtotal: ${money(
-        sale.subtotal
-      )}` +
-      `\nInvoice Discount: ${money(
-        sale.invoiceDiscount
-      )}` +
-      `\nTax: ${money(sale.tax)}` +
-      `\nTotal: ${money(sale.total)}` +
-      `\nPaid: ${money(sale.paid)}` +
-      `\nBalance: ${money(
-        sale.balance
-      )}`;
-
-    if (sale.change > 0) {
-      message +=
-        `\nChange: ${money(
-          sale.change
-        )}`;
-    }
-
-    message +=
-      `\n\nThank you for your business! 🙏` +
-      `\n\n*PRINT & CRAFT (PVT) LTD.*`;
-
-    return message;
+    return [
+      `Hello *${sale.customer?.name ?? "Customer"}*,`,
+      "",
+      "Thank you for choosing *PRINT & CRAFT (PVT) LTD.* We appreciate your business.",
+      "",
+      `*Invoice:* ${sale.invoiceNumber}`,
+      "",
+      ...itemLines,
+      "",
+      `*Total:* ${money(sale.total)}`,
+      `Paid: ${money(sale.paid)}  |  *Balance due: ${money(sale.balance)}*`,
+      ...(sale.change > 0 ? [`Change returned: ${money(sale.change)}`] : []),
+      "",
+      "If you have any questions, simply reply to this message.",
+      "",
+      "Warm regards,",
+      "*PRINT & CRAFT (PVT) LTD.*",
+    ].join("\n");
   }
 
   function sendWhatsAppInvoice(
