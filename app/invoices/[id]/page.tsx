@@ -259,7 +259,23 @@ export default function InvoicePage() {
             ← Back to Sales
           </Link>
 
-          <div className="flex gap-2"><button onClick={sendInvoiceWhatsApp} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">WhatsApp invoice</button><button onClick={() => window.print()} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white">Print / Save PDF</button></div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={sendInvoiceWhatsApp}
+              disabled={!customer?.phone}
+              className="rounded-lg bg-[#25D366] px-4 py-2 text-sm font-bold text-white hover:bg-[#20bd5a] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Send invoice to WhatsApp
+            </button>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white"
+            >
+              Print / Save PDF
+            </button>
+          </div>
         </div>
       </div>
 

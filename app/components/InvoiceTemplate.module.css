@@ -1,10 +1,12 @@
 .invoiceWrapper,
 .invoiceWrapper * { box-sizing: border-box; }
 .invoiceWrapper { --invoice-brand: #0f766e; --invoice-brand-dark: #115e59; --invoice-brand-light: #ccfbf1; --invoice-brand-pale: #f0fdfa; min-height: 100vh; overflow-x: auto; padding: 25px; background: #eee; color: #000; font-family: Arial, Helvetica, sans-serif; }
-.invoiceToolbar { display: flex; width: 210mm; max-width: 100%; justify-content: flex-end; align-items: center; gap: 10px; margin: 0 auto 15px; }
+.invoiceToolbar { display: flex; width: 210mm; max-width: 100%; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 10px; margin: 0 auto 15px; }
 .previewLabel { margin-right: auto; color: #555; font-size: 12px; }
 .invoiceToolbar button { border: 1px solid var(--invoice-brand-dark); border-radius: 4px; padding: 10px 18px; background: var(--invoice-brand-dark); color: #fff; cursor: pointer; font-size: 13px; font-weight: bold; white-space: nowrap; }
 .invoiceToolbar button:hover { background: var(--invoice-brand); }
+.invoiceToolbar .whatsAppButton { border-color: #16a34a; background: #16a34a; }
+.invoiceToolbar .whatsAppButton:hover { background: #15803d; }
 .noPrint { display: table-cell; }
 .invoicePage { width: 210mm; min-height: 297mm; margin: auto; padding: 12mm; background: #fff; color: #000; font-size: 11px; }
 .invoiceHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }

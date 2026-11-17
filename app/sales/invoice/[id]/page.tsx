@@ -54,6 +54,13 @@ function formatTime(value: string) {
     : parsed.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
+function money(value: number) {
+  return `LKR ${Number(value || 0).toLocaleString("en-LK", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
 export default function InvoicePreviewPage() {
   const params = useParams();
   const invoiceId = params?.id as string;
@@ -210,6 +217,46 @@ export default function InvoicePreviewPage() {
     discount: Math.max(Number(item.discount || 0), 0),
   }));
 
+  function sendInvoiceWhatsApp() {
+    const digits = (customer?.phone || "").replace(/\D/g, "");
+    const phone = digits.startsWith("0") ? `94${digits.slice(1)}` : digits;
+    if (!phone) {
+      alert("This customer does not have a WhatsApp number.");
+      return;
+    }
+
+    const itemLines = invoiceItems.map((item) => {
+      const quantity = Math.max(Number(item.quantity || 0), 0);
+      const gross = Math.max(Number(item.unitPrice || 0), 0) * quantity;
+      const lineTotal = Math.max(gross - Math.min(Number(item.discount || 0), gross), 0);
+      return `• ${item.description} × ${quantity} — ${money(lineTotal)}`;
+    });
+    const balance = Math.max(invoiceTotal - amountPaid, 0);
+    const message = [
+      `Hello *${customer?.name || "Customer"}*,`,
+      "",
+      "Thank you for choosing *PRINT & CRAFT (PVT) LTD.* We appreciate your business.",
+      "",
+      `*Invoice:* ${sale?.invoice_number}`,
+      "",
+      ...itemLines,
+      "",
+      `*Total:* ${money(invoiceTotal)}`,
+      `Paid: ${money(amountPaid)}  |  *Balance due: ${money(balance)}*`,
+      "",
+      "If you have any questions, simply reply to this message.",
+      "",
+      "Warm regards,",
+      "*PRINT & CRAFT (PVT) LTD.*",
+    ].join("\n");
+
+    window.open(
+      `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-100">
@@ -251,7 +298,7 @@ export default function InvoicePreviewPage() {
   return (
     <>
       <div className="print:hidden sticky top-0 z-50 border-b border-slate-200 bg-white shadow-sm">
-        <div className="mx-auto flex max-w-[900px] items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex max-w-[900px] flex-wrap items-center justify-between gap-3 px-4 py-3">
           <Link
             href="/sales"
             className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
@@ -259,13 +306,23 @@ export default function InvoicePreviewPage() {
             ← Back to Sales
           </Link>
 
-          <button
-            type="button"
-            onClick={printInvoice}
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
-          >
-            🖨 Print / Save PDF
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={sendInvoiceWhatsApp}
+              disabled={!customer?.phone}
+              className="rounded-lg bg-[#25D366] px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-[#20bd5a] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Send invoice to WhatsApp
+            </button>
+            <button
+              type="button"
+              onClick={printInvoice}
+              className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
+            >
+              🖨 Print / Save PDF
+            </button>
+          </div>
         </div>
       </div>
 

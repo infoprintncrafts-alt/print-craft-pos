@@ -82,6 +82,12 @@ function nonNegative(value: number) {
   return Number.isFinite(value) ? Math.max(value, 0) : 0;
 }
 
+function toWhatsAppPhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.startsWith("0") ? `94${digits.slice(1)}` : digits;
+}
+
 export default function InvoiceTemplate({
   business,
   invoiceNumber = "INV-0001",
@@ -243,12 +249,55 @@ export default function InvoiceTemplate({
     setMethod(next.length > 0 ? next.join(" + ") : "Credit");
   }
 
+  function sendInvoiceWhatsApp() {
+    const phone = toWhatsAppPhone(customerDetails.phone);
+    if (!phone) {
+      window.alert("Add a customer WhatsApp number before sending this invoice.");
+      return;
+    }
+
+    const itemLines = rows
+      .filter((item) => item.description.trim())
+      .map((item) => {
+        const quantity = nonNegative(item.quantity ?? 1);
+        const gross = nonNegative(item.unitPrice) * quantity;
+        const amount = gross - Math.min(nonNegative(item.discount), gross);
+        return `• ${item.description} × ${quantity} — ${money(amount)}`;
+      });
+
+    const message = [
+      `Hello *${customerDetails.name || "Customer"}*,`,
+      "",
+      `Thank you for choosing *${businessDetails.name}*. We appreciate your business.`,
+      "",
+      `*Invoice:* ${invoiceNumber}`,
+      "",
+      ...itemLines,
+      "",
+      `*Total:* ${money(grandTotal)}`,
+      `Paid: ${money(paid)}  |  *Balance due: ${money(balance)}*`,
+      ...(change > 0 ? [`Change returned: ${money(change)}`] : []),
+      "",
+      "If you have any questions, simply reply to this message.",
+      "",
+      "Warm regards,",
+      `*${businessDetails.name}*`,
+    ].join("\n");
+
+    window.open(
+      `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }
+
   return (
     <div className={styles.invoiceWrapper} data-invoice-template>
       {showToolbar && (
         <div className={styles.invoiceToolbar}>
           <span className={styles.previewLabel}>{editable ? "Editable invoice preview" : "Invoice"}</span>
           {editable && <button type="button" onClick={addRow}>+ Add Item</button>}
+          {editable && <button type="button" className={styles.whatsAppButton} onClick={sendInvoiceWhatsApp}>Send invoice to WhatsApp</button>}
           <button type="button" onClick={() => window.print()}>Print Invoice</button>
         </div>
       )}
