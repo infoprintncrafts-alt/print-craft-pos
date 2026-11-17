@@ -356,7 +356,19 @@ export default function InvoiceTemplate({
                         />
                       ) : item.description}
                     </td>
-                    <td className={styles.center}>{quantity}</td>
+                    <td className={styles.center}>
+                      {editable ? (
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          className={styles.quantityInput}
+                          value={quantity || ""}
+                          onChange={(event) => updateItem(item.id, "quantity", event.target.value)}
+                          aria-label={`Item ${index + 1} quantity`}
+                        />
+                      ) : quantity}
+                    </td>
                     <td>
                       {editable ? (
                         <input type="number" min="0" className={styles.numberInput} value={item.unitPrice || ""} onChange={(event) => updateItem(item.id, "unitPrice", event.target.value)} aria-label={`Item ${index + 1} unit price`} />

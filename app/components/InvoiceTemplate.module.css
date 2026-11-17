@@ -42,6 +42,8 @@
 .center { text-align: center; }
 .descriptionInput, .numberInput { width: 100%; border: none; outline: none; padding: 3px; background: transparent; color: #000; font-family: inherit; font-size: 10px; }
 .numberInput { text-align: right; }
+.quantityInput { width: 100%; min-width: 0; border: 1px solid transparent; outline: none; padding: 3px 1px; background: transparent; color: #000; font-family: inherit; font-size: 10px; text-align: center; }
+.quantityInput:focus { border-color: var(--invoice-brand); background: var(--invoice-brand-pale); }
 .moneyCell { display: block; text-align: right; white-space: nowrap; }
 .amountCell { font-weight: bold; text-align: right; white-space: nowrap; }
 .removeRow { width: 22px; height: 22px; border: none; border-radius: 3px; background: #000; color: #fff; cursor: pointer; font-size: 17px; line-height: 1; }
