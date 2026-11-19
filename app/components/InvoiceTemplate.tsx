@@ -90,7 +90,7 @@ function toWhatsAppPhone(value: string) {
 
 export default function InvoiceTemplate({
   business,
-  invoiceNumber = "INV-0001",
+  invoiceNumber = "INV-0000000",
   customer,
   items: initialItems,
   initialPaid = 0,

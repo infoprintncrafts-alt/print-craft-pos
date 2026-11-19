@@ -795,11 +795,18 @@ export default function SalesPage() {
   // =========================================================
 
   async function generateInvoiceNumber() {
-    // Counting rows is unsafe: after a deletion or concurrent sale it can
-    // reuse an existing invoice number. Use a millisecond timestamp plus a
-    // short random suffix instead.
-    const stamp = new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 14);
-    return `INV-${stamp}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+    const { data, error } = await supabase.rpc("next_document_number", {
+      p_prefix: "INV",
+    });
+
+    if (error) {
+      throw new Error(`Invoice number could not be generated: ${error.message}`);
+    }
+    if (typeof data !== "string") {
+      throw new Error("Invoice number could not be generated.");
+    }
+
+    return data;
   }
 
   // =========================================================
@@ -1047,6 +1054,8 @@ export default function SalesPage() {
         );
       }
 
+      const savedInvoiceNumber = String(sale.invoice_number ?? invoiceNumber);
+
       // SAVE SALE ITEMS
       //
       // item.discount in the cart is UNIT discount.
@@ -1193,7 +1202,7 @@ export default function SalesPage() {
             reference_id: sale.id,
 
             notes:
-              `Sale ${invoiceNumber}`,
+              `Sale ${savedInvoiceNumber}`,
 
             created_by: userId,
           });
@@ -1253,7 +1262,7 @@ export default function SalesPage() {
               null,
 
             notes:
-              `Payment for ${invoiceNumber}`,
+              `Payment for ${savedInvoiceNumber}`,
           });
 
         if (paymentError) {
@@ -1272,7 +1281,7 @@ export default function SalesPage() {
         {
           saleId: sale.id,
 
-          invoiceNumber,
+          invoiceNumber: savedInvoiceNumber,
 
           customer:
             selectedCustomer,

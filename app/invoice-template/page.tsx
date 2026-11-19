@@ -10,7 +10,7 @@ const sampleItems: InvoiceTemplateItem[] = [
 export default function InvoicePage() {
   return (
     <InvoiceTemplate
-      invoiceNumber="PC-2026-0001"
+      invoiceNumber="INV-0000000"
       customer={{
         name: "Mohamed Customer",
         address: "Kinniya, Sri Lanka",
